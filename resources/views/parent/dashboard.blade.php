@@ -1,0 +1,145 @@
+@extends('layouts.app')
+
+@section('content')
+<style>
+    .card-dashboard { border: none; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); transition: transform 0.2s; }
+    .card-dashboard:hover { transform: translateY(-5px); }
+    .icon-box { width: 50px; height: 50px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+    .notice-item { border-left: 4px solid #3b82f6; background: #f8fafc; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
+    .notice-date { font-size: 0.8rem; font-weight: bold; color: #64748b; text-transform: uppercase; }
+</style>
+
+<div class="container-fluid pb-5">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-1">Parent Dashboard</h3>
+            <p class="text-muted small mb-0">Overview for <span class="fw-bold text-primary">{{ $student->student_name ?? 'Child' }}</span></p>
+        </div>
+        <span class="badge bg-white text-secondary border px-3 py-2 rounded-pill shadow-sm">{{ now()->format('d M Y') }}</span>
+    </div>
+
+    <div class="row g-4 mb-4">
+        
+        <div class="col-md-4">
+            <div class="card card-dashboard h-100 p-3 bg-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-box bg-danger bg-opacity-10 text-danger me-3">
+                            <i class="bi bi-wallet2"></i>
+                        </div>
+                        <div>
+                            <small class="text-muted text-uppercase fw-bold">Outstanding Fees</small>
+                            <h2 class="fw-bold text-dark mb-0">RM {{ number_format($fees, 2) }}</h2>
+                        </div>
+                    </div>
+                    @if($fees > 0)
+                        <a href="{{ route('parent.payment') }}" class="btn btn-danger w-100 rounded-pill">Pay Now</a>
+                    @else
+                        <button class="btn btn-success w-100 rounded-pill" disabled><i class="bi bi-check-circle me-1"></i> All Paid</button>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card card-dashboard h-100 p-3 bg-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-box bg-success bg-opacity-10 text-success me-3">
+                            <i class="bi bi-calendar-check"></i>
+                        </div>
+                        <div>
+                            <small class="text-muted text-uppercase fw-bold">Attendance ({{ now()->format('M') }})</small>
+                            <h2 class="fw-bold text-dark mb-0">{{ $attendance }}%</h2>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ $attendance }}%"></div>
+                    </div>
+                    <small class="text-muted mt-2 d-block">{{ $attendance >= 90 ? 'Excellent attendance!' : 'Keep it up!' }}</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card card-dashboard h-100 p-3 bg-dark text-white" style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%);">
+                <div class="card-body d-flex flex-column justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-white text-dark d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px; font-weight:bold;">
+                            {{ substr($student->student_name ?? 'S', 0, 2) }}
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">{{ $student->classroom->class_name ?? 'No Class' }}</h5>
+                            <small class="text-white-50">Class Teacher: {{ $teacher->full_name ?? 'Not Assigned' }}</small>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <a href="{{ route('parent.communication') }}" class="btn btn-outline-light btn-sm rounded-pill w-100">Message Teacher</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        
+        <div class="col-lg-7">
+            <div class="card card-dashboard h-100">
+                <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-megaphone me-2 text-primary"></i> Notice Board</h5>
+                    <a href="{{ route('parent.notices') }}" class="btn btn-light btn-sm rounded-pill">View All</a>
+                </div>
+                <div class="card-body px-4">
+                    @forelse($notices as $notice)
+                        <div class="notice-item">
+                            <div class="d-flex justify-content-between mb-1">
+                                <h6 class="fw-bold text-dark mb-0">{{ $notice->title }}</h6>
+                                <span class="badge bg-light text-secondary">{{ \Carbon\Carbon::parse($notice->date)->format('d M') }}</span>
+                            </div>
+                            <p class="text-muted small mb-0">{{ Str::limit($notice->description, 80) }}</p>
+                        </div>
+                    @empty
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-calendar-x fs-1 opacity-50"></i>
+                            <p class="mt-2">No upcoming notices.</p>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card card-dashboard h-100">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="fw-bold text-dark mb-0">Teacher {{ explode(' ', trim($teacher->full_name ?? ''))[0] }}</h5>
+                    <small class="text-success"><i class="bi bi-circle-fill me-1" style="font-size: 8px;"></i> Class Teacher</small>
+                </div>
+                <div class="card-body d-flex flex-column justify-content-center align-items-center text-center px-4">
+                    
+                    @if($latestMsg)
+                        <div class="bg-light p-3 rounded-3 w-100 mb-3 text-start">
+                            <small class="text-muted fw-bold d-block mb-1">
+                                {{ $latestMsg->sender_type == 'App\Models\Guardian' ? 'You said:' : 'Teacher said:' }}
+                            </small>
+                            <p class="text-dark mb-0 fst-italic">"{{ Str::limit($latestMsg->message_content, 60) }}"</p>
+                            <small class="text-muted d-block text-end mt-1" style="font-size: 0.7rem;">{{ $latestMsg->created_at->diffForHumans() }}</small>
+                        </div>
+                        <a href="{{ route('parent.communication') }}" class="btn btn-primary rounded-pill w-100">Reply Now</a>
+                    @else
+                        <div class="bg-light rounded-circle p-3 mb-3 text-primary bg-opacity-10">
+                            <i class="bi bi-chat-heart fs-1"></i>
+                        </div>
+                        <p class="text-muted small">No recent messages with the class teacher.</p>
+                        @if($teacher)
+                            <a href="{{ route('parent.communication', ['teacher_id' => $teacher->teacher_id]) }}" class="btn btn-primary rounded-pill px-4">Start Chat</a>
+                        @endif
+                    @endif
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+@endsection
