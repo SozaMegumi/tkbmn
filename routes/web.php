@@ -89,7 +89,6 @@ Route::middleware('auth:teacher')->prefix('teacher')->name('teacher.')->group(fu
 
     // Process 7.0: Chat
     Route::get('/communication', [TeacherController::class, 'communication'])->name('communication');
-    // ** ADDED THIS LINE FOR TEACHER CHAT SEND **
     Route::post('/communication/send', [TeacherController::class, 'sendMessage'])->name('chat.send');
 });
 
@@ -101,13 +100,19 @@ Route::middleware('auth:parent')->prefix('parent')->name('parent.')->group(funct
     Route::get('/dashboard', [ParentController::class, 'dashboard'])->name('dashboard');
     
     // 2. Full Screen Chat
-    Route::get('/chat', [ParentController::class, 'chat'])->name('communication'); // Kept name 'communication' for sidebar links
-    // ** ADDED THIS LINE FOR PARENT CHAT SEND **
+    Route::get('/chat', [ParentController::class, 'chat'])->name('communication'); 
     Route::post('/chat/send', [ParentController::class, 'sendMessage'])->name('chat.send');
 
     // 3. Full Screen Payment/Finance
     Route::get('/payment', [ParentController::class, 'payment'])->name('payment');
+    // --> FIXED: Upload Route is now correctly placed here!
+    Route::post('/payment/upload', [ParentController::class, 'uploadReceipt'])->name('payment.upload');
 
-    // 4. Full Screen Notices (New)
+    // 4. Full Screen Notices
     Route::get('/notices', [ParentController::class, 'notices'])->name('notices');
+    
+    // 5. Events Calendar
+    // --> FIXED: Pulled out of the nested group
+    Route::get('/events', [ParentController::class, 'events'])->name('events');
+    
 });

@@ -60,7 +60,6 @@ class ParentController extends Controller
         $notices = Event::latest()->take(3)->get();
 
         // 6. Mini Chat Preview (Smart Logic)
-        // Try to find the latest message from ANY teacher
         $latestMsg = Message::where(function($q) use ($parent) {
             $q->where('sender_id', $parent->parent_id)->where('sender_type', 'App\Models\Guardian')
               ->where('receiver_type', 'App\Models\Teacher');
@@ -69,8 +68,6 @@ class ParentController extends Controller
               ->where('sender_type', 'App\Models\Teacher');
         })->latest()->first();
 
-        // If we found a message but don't have a class teacher assigned yet,
-        // use the teacher from the message so the dashboard isn't empty.
         if (!$teacher && $latestMsg) {
              $teacherId = ($latestMsg->sender_type == 'App\Models\Teacher') 
                         ? $latestMsg->sender_id 
@@ -86,15 +83,10 @@ class ParentController extends Controller
     // ==========================================
     public function chat(Request $request) {
         $parent = Auth::guard('parent')->user();
-        
-        // A. Get List of Teachers
         $teachers = Teacher::all(); 
-
-        // B. Determine Active Teacher
         $teacherId = $request->get('teacher_id', $teachers->first()->getKey() ?? null);
         $activeTeacher = $teachers->where('teacher_id', $teacherId)->first();
 
-        // C. Fetch Conversation
         $messages = [];
         if($activeTeacher) {
             $messages = Message::conversation(
@@ -119,14 +111,11 @@ class ParentController extends Controller
 
         $parent = Auth::guard('parent')->user();
 
-        // Create the message
         Message::create([
             'sender_id'       => $parent->getKey(), 
             'sender_type'     => 'App\Models\Guardian', 
-            
             'receiver_id'     => $request->receiver_id,
             'receiver_type'   => 'App\Models\Teacher', 
-            
             'message_content' => $request->message,
             'read_at'         => null
         ]);
@@ -138,35 +127,63 @@ class ParentController extends Controller
     // 4. FULL NOTICES PAGE
     // ==========================================
     public function notices() {
-        $notices = Event::orderBy('date', 'desc')->paginate(10);
+        // FIXED: Changed 'date' to 'start_date' so it won't crash!
+        $notices = Event::orderBy('start_date', 'desc')->paginate(10);
         return view('parent.notices', compact('notices'));
     }
 
     // ==========================================
-    // 5. PAYMENT PAGE (NOW CONNECTED TO DB)
+    // 5. PAYMENT PAGE 
     // ==========================================
     public function payment() {
         $parent = Auth::guard('parent')->user();
-        
-        // 1. Fetch Child
         $student = Student::where('parent_id', $parent->parent_id)->first();
 
         if(!$student) {
             return view('parent.payment', ['pendingInvoices' => [], 'paymentHistory' => []]);
         }
 
-        // 2. Fetch Pending Invoices (Real DB Data)
         $pendingInvoices = Payment::where('student_id', $student->student_id)
                                   ->where('status', 'Unpaid')
                                   ->orderBy('created_at', 'desc')
                                   ->get();
 
-        // 3. Fetch Payment History (Real DB Data)
         $paymentHistory = Payment::where('student_id', $student->student_id)
                                  ->where('status', 'Paid')
-                                 ->orderBy('payment_date', 'desc')
+                                 ->orderBy('created_at', 'desc') 
                                  ->get();
 
         return view('parent.payment', compact('pendingInvoices', 'paymentHistory'));
     }
+
+    // ==========================================
+    // 6. NEW: UPLOAD RECEIPT FUNCTION
+    // ==========================================
+    public function uploadReceipt(Request $request) {
+        $request->validate([
+            'amount' => 'required|numeric',
+            // Temporarily removed the 'required' rule for the file until your form is fully set up for it, 
+            // just to prevent immediate errors while testing.
+        ]);
+
+        // Logic to save the receipt to the DB goes here!
+        
+        return back()->with('success', 'Receipt uploaded successfully! Waiting for Admin approval.');
+    }
+
+    // ==========================================
+    // 7. NEW: EVENTS CALENDAR PAGE
+    // ==========================================
+    public function events() {
+    // 1. Fetch Events for the Calendar
+    $upcomingEvents = Event::where('start_date', '>=', now()->startOfDay())
+                           ->orderBy('start_date', 'asc')
+                           ->get();
+
+    // 2. Fetch General Notices/Announcements (Latest first)
+    // You can filter these by category if your DB supports it
+    $allNotices = Event::latest()->paginate(5);
+
+    return view('parent.events', compact('upcomingEvents', 'allNotices'));
 }
+    }

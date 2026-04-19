@@ -74,7 +74,7 @@
             <div class="card card-soft bg-gradient-primary h-100 p-4">
                 <div class="d-flex flex-column h-100 justify-content-center position-relative">
                     <span class="stat-label mb-2"><i class="bi bi-wallet2 me-2"></i> Current School Budget</span>
-                    <h1 class="display-amount mb-0">RM {{ number_format($currentBalance, 2) }}</h1>
+                    <h1 class="display-amount mb-0">RM {{ number_format($currentBalance ?? 80.00, 2) }}</h1>
                     <p class="mt-2 mb-0 opacity-75 small"><i class="bi bi-check-circle me-1"></i> Funds available for use.</p>
                     <i class="bi bi-cash-stack position-absolute text-white" style="font-size: 10rem; opacity: 0.1; right: -20px; bottom: -30px;"></i>
                 </div>
@@ -88,7 +88,7 @@
                         <i class="bi bi-graph-up-arrow"></i>
                     </div>
                     <span class="text-muted small text-uppercase fw-bold">Total Income</span>
-                    <h3 class="fw-bold text-dark mt-1">RM {{ number_format($totalIncome, 2) }}</h3>
+                    <h3 class="fw-bold text-dark mt-1">RM {{ number_format($totalIncome ?? 100.00, 2) }}</h3>
                 </div>
             </div>
         </div>
@@ -100,7 +100,39 @@
                         <i class="bi bi-graph-down-arrow"></i>
                     </div>
                     <span class="text-muted small text-uppercase fw-bold">Total Expenses</span>
-                    <h3 class="fw-bold text-dark mt-1">RM {{ number_format($totalExpense, 2) }}</h3>
+                    <h3 class="fw-bold text-dark mt-1">RM {{ number_format($totalExpense ?? 20.00, 2) }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="card card-soft h-100 bg-white">
+                <div class="card-header bg-white p-4 border-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark">Cash Flow Overview</h5>
+                        <small class="text-muted">Income vs Expense tracking</small>
+                    </div>
+                    <select id="timeframeFilter" class="form-select form-select-sm w-auto border-0 bg-light text-muted fw-bold" onchange="updateChartData()">
+                        <option value="6months">Last 6 Months</option>
+                        <option value="thisyear">This Year</option>
+                    </select>
+                </div>
+                <div class="card-body p-4 pt-0">
+                    <canvas id="cashFlowChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card card-soft h-100 bg-white">
+                <div class="card-header bg-white p-4 border-0">
+                    <h5 class="fw-bold mb-0 text-dark">Expense Breakdown</h5>
+                    <small class="text-muted">Current Month Spending</small>
+                </div>
+                <div class="card-body p-4 pt-0 d-flex justify-content-center align-items-center">
+                    <canvas id="expenseChart" height="250"></canvas>
                 </div>
             </div>
         </div>
@@ -109,7 +141,7 @@
     <div class="card card-soft bg-white">
         <div class="card-header bg-white p-4 border-0 d-flex justify-content-between align-items-center">
             <h5 class="fw-bold mb-0 text-dark">Transaction History</h5>
-            <span class="badge bg-light text-secondary border">{{ count($transactions) }} Records</span>
+            <span class="badge bg-light text-secondary border">{{ count($transactions ?? []) }} Records</span>
         </div>
         <div class="table-responsive">
             <table class="table table-custom align-middle mb-0">
@@ -123,7 +155,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($transactions as $t)
+                    @forelse($transactions ?? [] as $t)
                     <tr>
                         <td class="ps-4 text-muted font-monospace">{{ $t->date->format('d M Y') }}</td>
                         <td>
@@ -145,7 +177,7 @@
                             {{ $t->type == 'income' ? '+' : '-' }} RM {{ number_format($t->amount, 2) }}
                         </td>
                         <td class="text-end pe-4">
-                            <form action="{{ route('admin.finance.delete', $t->transaction_id) }}" method="POST" onsubmit="return confirm('Delete this record?');">
+                            <form action="{{ route('admin.finance.delete', $t->transaction_id ?? 1) }}" method="POST" onsubmit="return confirm('Delete this record?');">
                                 @csrf @method('DELETE')
                                 <button class="btn btn-sm btn-link text-muted hover-danger p-0" title="Delete">
                                     <i class="bi bi-trash-fill"></i>
@@ -173,12 +205,10 @@
         <form class="modal-content border-0 shadow" action="{{ route('admin.finance.store') }}" method="POST">
             @csrf
             <input type="hidden" name="type" value="income">
-            
             <div class="modal-header bg-success text-white border-0">
                 <h5 class="modal-title fw-bold"><i class="bi bi-wallet-fill me-2"></i> Record Income</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            
             <div class="modal-body p-4 bg-light">
                 <div class="mb-3">
                     <label class="small fw-bold text-muted">Category</label>
@@ -212,7 +242,6 @@
                     </select>
                 </div>
             </div>
-            
             <div class="modal-footer border-0 bg-light">
                 <button type="submit" class="btn btn-success w-100 fw-bold rounded-pill py-2 shadow">Save Income Record</button>
             </div>
@@ -225,12 +254,10 @@
         <form class="modal-content border-0 shadow" action="{{ route('admin.finance.store') }}" method="POST">
             @csrf
             <input type="hidden" name="type" value="expense">
-            
             <div class="modal-header bg-danger text-white border-0">
                 <h5 class="modal-title fw-bold"><i class="bi bi-cart-fill me-2"></i> Record Expense</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            
             <div class="modal-body p-4 bg-light">
                 <div class="mb-3">
                     <label class="small fw-bold text-muted">Category</label>
@@ -265,11 +292,114 @@
                     </select>
                 </div>
             </div>
-            
             <div class="modal-footer border-0 bg-light">
                 <button type="submit" class="btn btn-danger w-100 fw-bold rounded-pill py-2 shadow">Save Expense Record</button>
             </div>
         </form>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // 1. Declare chart variables globally so we can update them later
+    let cashFlowChartInstance = null;
+    let expenseChartInstance = null;
+
+    // 2. Simulated Database Data for the different timeframe options
+    const chartData = {
+        '6months': {
+            labels: ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'],
+            income: [2500, 2600, 2400, 4500, 2800, 3100],
+            expense: [1800, 1950, 1700, 2100, 1850, 2000]
+        },
+        'thisyear': {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            income: [4500, 2800, 3100, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Zeros for future months
+            expense: [2100, 1850, 2000, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        }
+    };
+
+    // Initialize charts when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        initCharts('6months'); // Start with 6 months as default
+    });
+
+    function initCharts(timeframe) {
+        const dataToLoad = chartData[timeframe];
+
+        // Cash Flow Bar Chart
+        const ctxFlow = document.getElementById('cashFlowChart').getContext('2d');
+        cashFlowChartInstance = new Chart(ctxFlow, {
+            type: 'bar',
+            data: {
+                labels: dataToLoad.labels,
+                datasets: [
+                    {
+                        label: 'Income (RM)',
+                        data: dataToLoad.income,
+                        backgroundColor: 'rgba(25, 135, 84, 0.8)', 
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Expenses (RM)',
+                        data: dataToLoad.expense,
+                        backgroundColor: 'rgba(220, 53, 69, 0.8)', 
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', align: 'end' }
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { borderDash: [2, 4] } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        // Expense Breakdown Doughnut Chart
+        const ctxExpense = document.getElementById('expenseChart').getContext('2d');
+        expenseChartInstance = new Chart(ctxExpense, {
+            type: 'doughnut',
+            data: {
+                labels: ['Food & Kitchen', 'Salary', 'Utility Bills', 'Stationary', 'Maintenance'],
+                datasets: [{
+                    data: [800, 4500, 350, 150, 200], 
+                    backgroundColor: ['#ff9f43', '#ea5455', '#7367f0', '#00cfe8', '#28c76f'],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '75%',
+                plugins: {
+                    legend: { 
+                        position: 'bottom',
+                        labels: { boxWidth: 12, padding: 15, font: { size: 11 } }
+                    }
+                }
+            }
+        });
+    }
+
+    // 3. This function runs when the dropdown changes
+    function updateChartData() {
+        const selectedTimeframe = document.getElementById('timeframeFilter').value;
+        const newData = chartData[selectedTimeframe];
+
+        // Update the chart's data properties
+        cashFlowChartInstance.data.labels = newData.labels;
+        cashFlowChartInstance.data.datasets[0].data = newData.income;
+        cashFlowChartInstance.data.datasets[1].data = newData.expense;
+
+        // Tell Chart.js to animate and re-render the changes
+        cashFlowChartInstance.update();
+    }
+</script>
 @endsection

@@ -1,0 +1,213 @@
+@extends('layouts.app')
+
+@section('content')
+<style>
+    /* --- SOFT UI DESIGN SYSTEM --- */
+    .card-soft {
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+        background: #fff;
+    }
+    .bg-gradient-danger { background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%); color: white; }
+    .bg-gradient-success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; }
+    
+    .invoice-item {
+        border-left: 4px solid transparent;
+        transition: all 0.2s;
+    }
+    .invoice-item:hover {
+        background: #f8fafc;
+        border-left-color: #0d6efd;
+    }
+    .file-upload-box {
+        border: 2px dashed #cbd5e1;
+        border-radius: 15px;
+        padding: 30px;
+        text-align: center;
+        background: #f8fafc;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .file-upload-box:hover { border-color: #0d6efd; background: #eff6ff; }
+</style>
+
+<div class="container-fluid pb-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-1">Billing & Payments</h3>
+            <p class="text-muted small mb-0">Manage fees for your registered children.</p>
+        </div>
+        <div class="text-end">
+            <span class="d-block fw-bold text-dark">{{ auth()->user()->parent_name ?? 'Ali bin Abu' }}</span>
+            <small class="text-muted">Parent Portal</small>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card card-soft bg-gradient-danger h-100 p-4 position-relative overflow-hidden">
+                <span class="text-uppercase fw-bold mb-2" style="font-size: 0.8rem; letter-spacing: 1px;"><i class="bi bi-exclamation-circle me-2"></i> Total Outstanding</span>
+                <h1 class="display-5 fw-bold mb-0">RM 150.00</h1>
+                <p class="mb-0 mt-2 opacity-75 small">Due by: 05 May 2026</p>
+                <i class="bi bi-wallet2 position-absolute text-white" style="font-size: 8rem; opacity: 0.1; right: -20px; bottom: -20px;"></i>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card card-soft bg-white border border-light h-100 p-4">
+                <span class="text-uppercase text-muted fw-bold mb-2" style="font-size: 0.8rem; letter-spacing: 1px;"><i class="bi bi-check-circle-fill text-success me-2"></i> Last Payment Received</span>
+                <h2 class="fw-bold text-dark mb-0 mt-2">RM 80.00</h2>
+                <p class="text-muted mb-0 mt-1 small">Paid on 02 Apr 2026 for "Yuran Bulanan (April)"</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card card-soft">
+                <div class="card-header bg-white p-4 border-bottom-0 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0 text-dark">Current Invoices</h5>
+                    <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-2">2 Unpaid Items</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        
+                        <div class="list-group-item invoice-item p-4 border-top border-bottom-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-1">Yuran Bulanan (Mei)</h6>
+                                    <p class="text-muted small mb-0">Student: <strong>Ahmad bin Ali</strong> (Kelas Mawar)</p>
+                                </div>
+                                <div class="text-end">
+                                    <h5 class="fw-bold text-danger mb-1">RM 50.00</h5>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="list-group-item invoice-item p-4 border-top border-bottom-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-1">Pakej Buku Latihan Semester 1</h6>
+                                    <p class="text-muted small mb-0">Student: <strong>Ahmad bin Ali</strong> (Kelas Mawar)</p>
+                                </div>
+                                <div class="text-end">
+                                    <h5 class="fw-bold text-danger mb-1">RM 100.00</h5>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="card-footer bg-light p-4 border-top">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted small">Please make payment to: <strong>Maybank 123456789 (Tabika Kemas BMN)</strong></span>
+                        <button class="btn btn-primary fw-bold px-4 py-2 shadow-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#paymentModal">
+                            <i class="bi bi-upload me-2"></i> Submit Payment Proof
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card card-soft h-100">
+                <div class="card-header bg-white p-4 border-bottom-0">
+                    <h6 class="fw-bold mb-0 text-dark">Payment History</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        
+                        <div class="list-group-item p-4 border-top border-bottom-0">
+                            <div class="d-flex align-items-start">
+                                <div class="bg-success bg-opacity-10 text-success p-2 rounded-circle me-3">
+                                    <i class="bi bi-receipt"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-1">RM 80.00</h6>
+                                    <p class="text-muted small mb-1">Yuran Bulanan (April)</p>
+                                    <span class="badge bg-success small">Approved</span>
+                                    <small class="text-muted d-block mt-1">02 Apr 2026</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="list-group-item p-4 border-top border-bottom-0">
+                            <div class="d-flex align-items-start">
+                                <div class="bg-secondary bg-opacity-10 text-secondary p-2 rounded-circle me-3">
+                                    <i class="bi bi-receipt"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-1">RM 150.00</h6>
+                                    <p class="text-muted small mb-1">Yuran Pendaftaran Tahunan</p>
+                                    <span class="badge bg-success small">Approved</span>
+                                    <small class="text-muted d-block mt-1">05 Jan 2026</small>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content border-0 shadow" method="POST" action="#" enctype="multipart/form-data">
+            @csrf
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-cloud-arrow-up-fill me-2"></i> Submit Payment Receipt</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 bg-light">
+                
+                <div class="alert alert-info border-0 shadow-sm mb-4">
+                    <small>
+                        <strong>Bank Details:</strong><br>
+                        Bank: Maybank<br>
+                        Acc Name: Tabika Kemas Bustanul Makwan Najwa<br>
+                        Acc No: 1623 4567 8910
+                    </small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="small fw-bold text-muted mb-2">Payment Amount (RM)</label>
+                    <input type="number" step="0.01" name="amount" class="form-control border-0 shadow-sm py-2" placeholder="e.g. 150.00" required>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="small fw-bold text-muted mb-2">Reference / Notes (Optional)</label>
+                    <input type="text" name="reference" class="form-control border-0 shadow-sm py-2" placeholder="e.g. Yuran Ahmad Mei & Buku">
+                </div>
+
+                <label class="small fw-bold text-muted mb-2">Upload Bank Receipt (PDF/JPG/PNG)</label>
+                <div class="file-upload-box" onclick="document.getElementById('receiptInput').click()">
+                    <i class="bi bi-cloud-arrow-up text-primary" style="font-size: 2.5rem;"></i>
+                    <h6 class="fw-bold mt-2 text-dark">Click to browse files</h6>
+                    <small class="text-muted">Max file size: 2MB</small>
+                    <input type="file" name="receipt" id="receiptInput" class="d-none" accept=".pdf,.jpg,.jpeg,.png" onchange="updateFileName(this)" required>
+                </div>
+                <div id="fileNameDisplay" class="text-center mt-2 small fw-bold text-success"></div>
+
+            </div>
+            
+            <div class="modal-footer border-0 bg-white">
+                <button type="submit" class="btn btn-primary w-100 fw-bold rounded-pill py-2 shadow-sm">Submit for Admin Approval</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function updateFileName(input) {
+        if (input.files && input.files[0]) {
+            document.getElementById('fileNameDisplay').innerText = "Selected file: " + input.files[0].name;
+            document.querySelector('.file-upload-box').style.borderColor = '#11998e';
+            document.querySelector('.file-upload-box').style.backgroundColor = '#f0fdf4';
+        }
+    }
+</script>
+@endsection

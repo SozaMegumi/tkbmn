@@ -5,8 +5,12 @@
     .card-dashboard { border: none; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); transition: transform 0.2s; }
     .card-dashboard:hover { transform: translateY(-5px); }
     .icon-box { width: 50px; height: 50px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
-    .notice-item { border-left: 4px solid #3b82f6; background: #f8fafc; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
-    .notice-date { font-size: 0.8rem; font-weight: bold; color: #64748b; text-transform: uppercase; }
+    .notice-item { border-left: 4px solid #3b82f6; background: #f8fafc; border-radius: 8px; padding: 15px; margin-bottom: 15px; transition: all 0.2s;}
+    .notice-item:hover { background: #f1f5f9; border-left-color: #0d6efd;}
+    
+    /* Dynamic border colors for the dashboard preview */
+    .border-danger-theme { border-left-color: #dc3545 !important; }
+    .border-warning-theme { border-left-color: #ffc107 !important; }
 </style>
 
 <div class="container-fluid pb-5">
@@ -88,21 +92,27 @@
             <div class="card card-dashboard h-100">
                 <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
                     <h5 class="fw-bold text-dark mb-0"><i class="bi bi-megaphone me-2 text-primary"></i> Notice Board</h5>
-                    <a href="{{ route('parent.notices') }}" class="btn btn-light btn-sm rounded-pill">View All</a>
                 </div>
                 <div class="card-body px-4">
                     @forelse($notices as $notice)
-                        <div class="notice-item">
-                            <div class="d-flex justify-content-between mb-1">
-                                <h6 class="fw-bold text-dark mb-0">{{ $notice->title }}</h6>
-                                <span class="badge bg-light text-secondary">{{ \Carbon\Carbon::parse($notice->date)->format('d M') }}</span>
+                        <div class="notice-item {{ $notice->theme == 'danger' ? 'border-danger-theme' : ($notice->theme == 'warning' ? 'border-warning-theme' : '') }}">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-0">{{ $notice->title }}</h6>
+                                    @if($notice->theme == 'danger')
+                                        <small class="text-danger fw-bold" style="font-size: 0.7rem;">SCHOOL CLOSED</small>
+                                    @endif
+                                </div>
+                                <span class="badge {{ $notice->theme == 'danger' ? 'bg-danger' : 'bg-primary' }} shadow-sm">
+                                    {{ \Carbon\Carbon::parse($notice->start_date)->format('d M') }}
+                                </span>
                             </div>
-                            <p class="text-muted small mb-0">{{ Str::limit($notice->description, 80) }}</p>
+                            <p class="text-muted small mb-0 mt-1">{{ \Illuminate\Support\Str::limit($notice->description, 80) }}</p>
                         </div>
                     @empty
                         <div class="text-center py-4 text-muted">
-                            <i class="bi bi-calendar-x fs-1 opacity-50"></i>
-                            <p class="mt-2">No upcoming notices.</p>
+                            <i class="bi bi-info-circle fs-1 opacity-50"></i>
+                            <p class="mt-2 mb-0">No upcoming notices from the Admin.</p>
                         </div>
                     @endforelse
                 </div>
@@ -122,7 +132,7 @@
                             <small class="text-muted fw-bold d-block mb-1">
                                 {{ $latestMsg->sender_type == 'App\Models\Guardian' ? 'You said:' : 'Teacher said:' }}
                             </small>
-                            <p class="text-dark mb-0 fst-italic">"{{ Str::limit($latestMsg->message_content, 60) }}"</p>
+                            <p class="text-dark mb-0 fst-italic">"{{ \Illuminate\Support\Str::limit($latestMsg->message_content, 60) }}"</p>
                             <small class="text-muted d-block text-end mt-1" style="font-size: 0.7rem;">{{ $latestMsg->created_at->diffForHumans() }}</small>
                         </div>
                         <a href="{{ route('parent.communication') }}" class="btn btn-primary rounded-pill w-100">Reply Now</a>

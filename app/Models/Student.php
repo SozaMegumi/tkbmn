@@ -21,7 +21,11 @@ class Student extends Model
     public function classroom() {
         return $this->belongsTo(Classroom::class, 'class_id', 'class_id');
     }
-    public function attendance() {
-        return $this->hasOne(Attendance::class, 'student_id', 'student_id');
+    
+    // ==========================================
+    // THE FIX: Changed to hasMany (One Student -> Many Days of Attendance)
+    // ==========================================
+    public function attendances() {
+        return $this->hasMany(Attendance::class, 'student_id', 'student_id');
     }
 }

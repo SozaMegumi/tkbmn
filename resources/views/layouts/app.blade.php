@@ -156,8 +156,16 @@
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="#"><i class="bi bi-credit-card-fill"></i> Payment</a>
+                    <a class="nav-link {{ request()->routeIs('parent.payment') ? 'active' : '' }}" href="{{ route('parent.payment') }}">
+                        <i class="bi bi-credit-card-fill"></i> Payment
+                    </a>
                 </li>
+            <li class="nav-item">
+    <a href="{{ route('parent.events') }}" class="nav-link {{ request()->routeIs('parent.events') ? 'active' : '' }}">
+        <i class="bi bi-calendar-event"></i>
+        <span>Events</span>
+    </a>
+</li>
             @endif
 
         </ul>

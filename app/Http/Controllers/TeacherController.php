@@ -9,7 +9,8 @@ use App\Models\Attendance;
 use App\Models\Classroom; 
 use App\Models\Message;   
 use App\Models\Guardian;  
-use App\Models\Teacher;   
+use App\Models\Teacher;
+use Carbon\Carbon; // <-- Added for date checking
 
 class TeacherController extends Controller
 {
@@ -17,7 +18,53 @@ class TeacherController extends Controller
     // DASHBOARD
     // ==========================================
     public function dashboard() {
-        return view('teacher.dashboard');
+        try {
+            // 1. Get Logged in Teacher
+            $teacher = Auth::guard('teacher')->user(); 
+
+            // Initialize defaults
+            $assignedClass = 'No Class Assigned';
+            $totalStudents = 0;
+            $attendanceMarked = false;
+            $unreadMessages = 0;
+
+            if ($teacher) {
+                // 2. Find the teacher's assigned class
+                // (Assuming Classroom model has a 'teacher_id'. If not, we just grab the first class as a fallback)
+                $classroom = Classroom::where('teacher_id', $teacher->teacher_id)->first() ?? Classroom::first();
+
+                if ($classroom) {
+                    $assignedClass = $classroom->class_name;
+                    $totalStudents = Student::where('class_id', $classroom->class_id)->count();
+
+                    // 3. Check if attendance was marked TODAY for this class
+                    $attendanceMarked = Attendance::where('class_id', $classroom->class_id)
+                                                  ->whereDate('date', Carbon::today())
+                                                  ->exists();
+                }
+
+                // 4. Count unread messages for this specific teacher
+                $unreadMessages = Message::where('receiver_id', $teacher->teacher_id)
+                                         ->where('receiver_type', 'App\Models\Teacher')
+                                         ->whereNull('read_at')
+                                         ->count();
+            }
+
+        } catch (\Exception $e) {
+            // Fallback if database tables aren't fully set up yet
+            $assignedClass = 'Database Error';
+            $totalStudents = 0;
+            $attendanceMarked = false;
+            $unreadMessages = 0;
+        }
+
+        // Pass everything to the new dashboard view!
+        return view('teacher.dashboard', compact(
+            'assignedClass', 
+            'totalStudents', 
+            'attendanceMarked', 
+            'unreadMessages'
+        ));
     }
 
     // ==========================================
@@ -80,7 +127,7 @@ class TeacherController extends Controller
     }
 
     // ==========================================
-    // COMMUNICATION (Chat) - FIXED IDS
+    // COMMUNICATION (Chat)
     // ==========================================
     public function communication(Request $request) {
         // 1. Get Logged in Teacher
@@ -90,17 +137,14 @@ class TeacherController extends Controller
         $parents = Guardian::all(); 
 
         // 3. Determine Active Parent
-        // FIX: Use 'parent_id' (not 'id') because of your database schema
         $parentId = $request->get('parent_id', $parents->first()->parent_id ?? null);
         
-        // Find parent using explicit 'parent_id' column logic
         $activeParent = $parents->where('parent_id', $parentId)->first();
 
         // 4. Fetch Conversation
         $messages = [];
         if($activeParent && $teacher) {
             $messages = Message::conversation(
-                // FIX: Use custom primary keys ->teacher_id and ->parent_id
                 $teacher->teacher_id, 'App\Models\Teacher', 
                 $activeParent->parent_id, 'App\Models\Guardian'
             )
@@ -120,7 +164,6 @@ class TeacherController extends Controller
         $teacher = Auth::guard('teacher')->user(); 
 
         Message::create([
-            // FIX: Use teacher_id
             'sender_id'       => $teacher->teacher_id,
             'sender_type'     => 'App\Models\Teacher',
             

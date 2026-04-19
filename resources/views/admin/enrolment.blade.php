@@ -29,6 +29,64 @@
         </div>
     @endif
 
+    @if(isset($unassignedStudents) && $unassignedStudents->count() > 0)
+    <div class="card shadow-sm border-0 border-start border-warning border-5 mb-4">
+        <div class="card-header bg-warning bg-opacity-10 text-dark">
+            <h5 class="mb-0 fw-bold"><i class="bi bi-exclamation-circle-fill text-warning me-2"></i> Pending Applications (Unassigned)</h5>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">MyKid</th>
+                        <th>Student Name</th>
+                        <th>Parent Info</th>
+                        <th>Status</th>
+                        <th class="text-end pe-4">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($unassignedStudents as $student)
+                    <tr>
+                        <td class="ps-4 font-monospace">{{ $student->mykid }}</td>
+                        <td class="fw-bold">{{ $student->student_name }}</td>
+                        <td>
+                            @if($student->parent)
+                                {{ $student->parent->parent_name }}<br>
+                                <small class="text-muted"><i class="bi bi-telephone"></i> {{ $student->parent->phone_number }}</small>
+                            @else
+                                <span class="text-danger small">No Parent</span>
+                            @endif
+                        </td>
+                        <td><span class="badge bg-secondary">Pending</span></td>
+                        <td class="text-end pe-4">
+                            <button class="btn btn-sm btn-outline-success fw-bold edit-btn"
+                                data-id="{{ $student->student_id }}"
+                                data-name="{{ $student->student_name }}"
+                                data-mykid="{{ $student->mykid }}"
+                                data-dob="{{ $student->dob }}"
+                                data-gender="{{ $student->gender }}"
+                                data-race="{{ $student->race }}"
+                                data-religion="{{ $student->religion }}"
+                                data-nationality="{{ $student->nationality }}"
+                                data-parent="{{ $student->parent_id }}"
+                                data-class="{{ $student->class_id }}"
+                                data-bs-toggle="modal" data-bs-target="#editStudentModal">
+                                <i class="bi bi-check-circle me-1"></i> Assign Class
+                            </button>
+                            <form action="{{ route('admin.enrolment.delete', $student->student_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete record?');">
+                                @csrf @method('DELETE')
+                                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
+
     @if(isset($classesWithStudents))
         @foreach($classesWithStudents as $classroom)
         <div class="card shadow-sm border-0 mb-4">
@@ -92,57 +150,6 @@
             </div>
         </div>
         @endforeach
-    @endif
-
-    @if(isset($unassignedStudents) && $unassignedStudents->count() > 0)
-    <div class="card shadow-sm border-0 border-start border-warning border-5 mb-4">
-        <div class="card-header bg-warning bg-opacity-10 text-dark">
-            <h5 class="mb-0 fw-bold"><i class="bi bi-exclamation-circle-fill text-warning me-2"></i> Unassigned Students</h5>
-        </div>
-        <div class="card-body p-0">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th class="ps-4">MyKid</th>
-                        <th>Student Name</th>
-                        <th>Parent Info</th>
-                        <th>Status</th>
-                        <th class="text-end pe-4">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($unassignedStudents as $student)
-                    <tr>
-                        <td class="ps-4 font-monospace">{{ $student->mykid }}</td>
-                        <td class="fw-bold">{{ $student->student_name }}</td>
-                        <td>{{ $student->parent->parent_name ?? 'No Parent' }}</td>
-                        <td><span class="badge bg-secondary">Unassigned</span></td>
-                        <td class="text-end pe-4">
-                            <button class="btn btn-sm btn-outline-primary edit-btn"
-                                data-id="{{ $student->student_id }}"
-                                data-name="{{ $student->student_name }}"
-                                data-mykid="{{ $student->mykid }}"
-                                data-dob="{{ $student->dob }}"
-                                data-gender="{{ $student->gender }}"
-                                data-race="{{ $student->race }}"
-                                data-religion="{{ $student->religion }}"
-                                data-nationality="{{ $student->nationality }}"
-                                data-parent="{{ $student->parent_id }}"
-                                data-class="{{ $student->class_id }}"
-                                data-bs-toggle="modal" data-bs-target="#editStudentModal">
-                                Assign Class
-                            </button>
-                            <form action="{{ route('admin.enrolment.delete', $student->student_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete record?');">
-                                @csrf @method('DELETE')
-                                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                            </form>
-                        </td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-    </div>
     @endif
 
     @if((!isset($classesWithStudents) || $classesWithStudents->isEmpty()) && (!isset($unassignedStudents) || $unassignedStudents->isEmpty()))
@@ -224,7 +231,7 @@
                                             <option value="{{ $parent->parent_id }}">{{ $parent->parent_name }} ({{ $parent->phone_number }})</option>
                                         @endforeach
                                     </select>
-                                    <small class="text-muted">Parent not listed? Go to "1.0 Accounts" to create them first.</small>
+                                    <small class="text-muted">Parent not listed? Go to "Accounts" to create them first.</small>
                                 </div>
                             </div>
                         </div>
@@ -232,7 +239,7 @@
                         <div class="col-md-12">
                             <label class="form-label">Assign Class</label>
                             <select name="class_id" class="form-select">
-                                <option value="">-- No Class Yet --</option>
+                                <option value="">-- No Class Yet (Pending) --</option>
                                 @foreach($classes as $class)
                                     <option value="{{ $class->class_id }}">{{ $class->class_name }}</option>
                                 @endforeach
@@ -344,10 +351,7 @@
                 document.getElementById('edit_gender').value = this.getAttribute('data-gender');
                 document.getElementById('edit_race').value = this.getAttribute('data-race');
                 document.getElementById('edit_religion').value = this.getAttribute('data-religion');
-                
-                // Updated Nationality Dropdown Population
                 document.getElementById('edit_nationality').value = this.getAttribute('data-nationality');
-                
                 document.getElementById('edit_parent').value = this.getAttribute('data-parent');
                 document.getElementById('edit_class').value = this.getAttribute('data-class');
 

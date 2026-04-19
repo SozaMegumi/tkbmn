@@ -224,10 +224,15 @@
             </div>
 
             @if(count($students) > 0)
-            <div class="card-footer bg-white p-4 border-top-0">
-                <button type="submit" class="btn btn-success fw-bold w-100 py-3 rounded-pill shadow">
-                    <i class="bi bi-cloud-arrow-up-fill me-2"></i> Sync & Save Attendance
-                </button>
+            <div class="card-footer bg-light p-4 border-top">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-muted small">
+                        <i class="bi bi-info-circle me-1"></i> Make sure to check before saving.
+                    </div>
+                    <button type="submit" class="btn btn-success fw-bold px-5 py-2 shadow-sm" style="border-radius: 12px;">
+                        <i class="bi bi-cloud-arrow-up-fill me-2"></i> Save Attendance
+                    </button>
+                </div>
             </div>
             @endif
         </div>
