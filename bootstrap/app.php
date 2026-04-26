@@ -14,8 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     $middleware->alias([
         'auth' => \Illuminate\Auth\Middleware\Authenticate::class,
     ]);
-    
-    // Logic: If an admin tries to go to 'parent/*', redirect them away
+
     $middleware->redirectTo(
         guests: '/login',
         users: function ($request) {

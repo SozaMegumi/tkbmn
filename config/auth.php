@@ -20,28 +20,29 @@ return [
     */
 
     'guards' => [
-        'web' => [
-            'driver' => 'session',
-            'provider' => 'users',
-        ],
-
-        // Independent sessions for each portal to prevent overlap
-        'admin' => [
-            'driver' => 'session',
-            'provider' => 'admins',
-        ],
-
-        'teacher' => [
-            'driver' => 'session',
-            'provider' => 'teachers',
-        ],
-
-        'parent' => [
-            'driver' => 'session',
-            'provider' => 'guardians',
-        ],
+    'web' => [
+        'driver' => 'session',
+        'provider' => 'users',
     ],
 
+    'admin' => [
+        'driver' => 'session',
+        'provider' => 'admins',
+        'session' => 'admin_session', // Unique cookie name
+    ],
+
+    'teacher' => [
+        'driver' => 'session',
+        'provider' => 'teachers',
+        'session' => 'teacher_session', // Unique cookie name
+    ],
+
+    'parent' => [
+        'driver' => 'session',
+        'provider' => 'guardians',
+        'session' => 'parent_session', // Unique cookie name
+    ],
+],
     /*
     |--------------------------------------------------------------------------
     | User Providers

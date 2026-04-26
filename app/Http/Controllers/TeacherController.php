@@ -32,14 +32,14 @@ class TeacherController extends Controller
             $attendanceMarked = false;
             $unreadMessages = 0;
 
-            // 2. Find the teacher's assigned class
+            // 2. Find the teacher's specific assigned class
             $classroom = Classroom::where('teacher_id', $teacher->teacher_id)->first();
 
             if ($classroom) {
                 $assignedClass = $classroom->class_name;
                 $totalStudents = Student::where('class_id', $classroom->class_id)->count();
 
-                // 3. Check if attendance was marked TODAY for this class (UTC+8 Safe)
+                // 3. Check if attendance was marked TODAY (UTC+8 Safe)
                 $attendanceMarked = Attendance::where('class_id', $classroom->class_id)
                     ->whereDate('date', Carbon::today('Asia/Kuala_Lumpur'))
                     ->exists();
@@ -73,9 +73,9 @@ class TeacherController extends Controller
         $teacher = Auth::guard('teacher')->user();
         if (!$teacher) return redirect()->route('login');
 
-        // Logic: Show all classes, but highlight the teacher's own class by default
         $classes = Classroom::all();
         $selectedClass = null;
+        // Default to today in UTC+8 string format
         $selectedDate = $request->get('attendance_date', Carbon::today('Asia/Kuala_Lumpur')->toDateString());
         $students = [];
 
@@ -105,6 +105,7 @@ class TeacherController extends Controller
         ]);
 
         foreach ($request->attendances as $studentId => $data) {
+            // Logical Check-in/Out Tally
             Attendance::updateOrCreate(
                 ['student_id' => $studentId, 'date' => $request->attendance_date],
                 [
@@ -125,7 +126,7 @@ class TeacherController extends Controller
         $teacher = Auth::guard('teacher')->user();
         if (!$teacher) return redirect()->route('login');
 
-        // Logic: Teachers usually grade students in their own assigned class
+        // Logic: Focus on the teacher's own students
         $classroom = Classroom::where('teacher_id', $teacher->teacher_id)->first();
         $students = $classroom ? Student::where('class_id', $classroom->class_id)->get() : collect();
 
@@ -133,7 +134,7 @@ class TeacherController extends Controller
     }
 
     public function storeGrade(Request $request) {
-        return back()->with('success', 'Academic records updated.');
+        return back()->with('success', 'Grades updated for classroom.');
     }
 
     // ==========================================
@@ -143,20 +144,17 @@ class TeacherController extends Controller
         $teacher = Auth::guard('teacher')->user(); 
         if (!$teacher) return redirect()->route('login');
 
-        // 1. Get List of Guardians linked to students
         $parents = Guardian::orderBy('parent_name', 'asc')->get(); 
-
-        // 2. Determine Active Parent
         $parentId = $request->get('parent_id', $parents->first()->parent_id ?? null);
         $activeParent = $parents->where('parent_id', $parentId)->first();
 
-        // 3. Fetch Conversation and Mark as Read
         $messages = [];
         if($activeParent) {
-            // Logic: Mark incoming messages from this parent as read
+            // Mark incoming messages as read when viewing
             Message::where('sender_id', $activeParent->parent_id)
                 ->where('receiver_id', $teacher->teacher_id)
                 ->where('receiver_type', 'App\Models\Teacher')
+                ->whereNull('read_at')
                 ->update(['read_at' => now()]);
 
             $messages = Message::conversation(
