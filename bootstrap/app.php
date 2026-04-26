@@ -10,12 +10,22 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-    ->withMiddleware(function (Middleware $middleware): void {
-        // Explicitly define the auth alias for different guards
-        $middleware->alias([
-            'auth' => \Illuminate\Auth\Middleware\Authenticate::class,
-        ]);
-    })
+    ->withMiddleware(function (Middleware $middleware) {
+    $middleware->alias([
+        'auth' => \Illuminate\Auth\Middleware\Authenticate::class,
+    ]);
+    
+    // Logic: If an admin tries to go to 'parent/*', redirect them away
+    $middleware->redirectTo(
+        guests: '/login',
+        users: function ($request) {
+            if ($request->is('admin/*')) return route('admin.dashboard');
+            if ($request->is('teacher/*')) return route('teacher.dashboard');
+            if ($request->is('parent/*')) return route('parent.dashboard');
+            return '/';
+        }
+    );
+})
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })->create();

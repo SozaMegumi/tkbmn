@@ -13,6 +13,7 @@ use App\Models\Guardian;
 use App\Models\Payment;    
 use App\Models\Attendance; 
 use App\Models\Classroom;  
+use Carbon\Carbon;
 
 class ParentController extends Controller
 {
@@ -23,10 +24,15 @@ class ParentController extends Controller
     {
         $parent = Auth::guard('parent')->user();
         
+        // Safety check to prevent portal leaking
+        if (!$parent) {
+            return redirect()->route('login');
+        }
+
         // 1. Fetch Child Info
         $student = Student::where('parent_id', $parent->parent_id)->first();
 
-        // Safety check
+        // Safety check if no student assigned
         if(!$student) {
             return view('parent.dashboard', [
                 'parent' => $parent, 'student' => null, 'fees' => 0.00, 
@@ -34,12 +40,12 @@ class ParentController extends Controller
             ]);
         }
 
-        // 2. Calculate Outstanding Fees (Real DB Query)
+        // 2. Calculate Outstanding Fees
         $fees = Payment::where('student_id', $student->student_id)
                        ->where('status', 'Unpaid')
                        ->sum('amount');
 
-        // 3. Calculate Attendance % (Real DB Query)
+        // 3. Calculate Attendance %
         $totalDays = Attendance::where('student_id', $student->student_id)->count();
         $presentDays = Attendance::where('student_id', $student->student_id)
                                  ->where('status', 'Present') 
@@ -47,7 +53,7 @@ class ParentController extends Controller
                                  
         $attendance = $totalDays > 0 ? round(($presentDays / $totalDays) * 100) : 0;
 
-        // 4. Get Class Teacher (Primary Logic)
+        // 4. Get Class Teacher
         $teacher = null;
         if($student->class_id) {
             $classroom = Classroom::find($student->class_id);
@@ -59,7 +65,7 @@ class ParentController extends Controller
         // 5. Fetch Latest 3 Announcements
         $notices = Event::latest()->take(3)->get();
 
-        // 6. Mini Chat Preview (Smart Logic)
+        // 6. Mini Chat Preview Logic
         $latestMsg = Message::where(function($q) use ($parent) {
             $q->where('sender_id', $parent->parent_id)->where('sender_type', 'App\Models\Guardian')
               ->where('receiver_type', 'App\Models\Teacher');
@@ -67,13 +73,6 @@ class ParentController extends Controller
             $q->where('receiver_id', $parent->parent_id)->where('receiver_type', 'App\Models\Guardian')
               ->where('sender_type', 'App\Models\Teacher');
         })->latest()->first();
-
-        if (!$teacher && $latestMsg) {
-             $teacherId = ($latestMsg->sender_type == 'App\Models\Teacher') 
-                        ? $latestMsg->sender_id 
-                        : $latestMsg->receiver_id;
-             $teacher = Teacher::where('teacher_id', $teacherId)->first();
-        }
 
         return view('parent.dashboard', compact('parent', 'student', 'fees', 'attendance', 'notices', 'teacher', 'latestMsg'));
     }
@@ -84,14 +83,14 @@ class ParentController extends Controller
     public function chat(Request $request) {
         $parent = Auth::guard('parent')->user();
         $teachers = Teacher::all(); 
-        $teacherId = $request->get('teacher_id', $teachers->first()->getKey() ?? null);
+        $teacherId = $request->get('teacher_id', $teachers->first()->teacher_id ?? null);
         $activeTeacher = $teachers->where('teacher_id', $teacherId)->first();
 
         $messages = [];
         if($activeTeacher) {
             $messages = Message::conversation(
-                $parent->getKey(), 'App\Models\Guardian',          
-                $activeTeacher->getKey(), 'App\Models\Teacher'     
+                $parent->parent_id, 'App\Models\Guardian',          
+                $activeTeacher->teacher_id, 'App\Models\Teacher'     
             )
             ->orderBy('created_at', 'asc')
             ->get();
@@ -101,7 +100,7 @@ class ParentController extends Controller
     }
 
     // ==========================================
-    // 3. SEND MESSAGE FUNCTION
+    // 3. SEND MESSAGE
     // ==========================================
     public function sendMessage(Request $request) {
         $request->validate([
@@ -112,7 +111,7 @@ class ParentController extends Controller
         $parent = Auth::guard('parent')->user();
 
         Message::create([
-            'sender_id'       => $parent->getKey(), 
+            'sender_id'       => $parent->parent_id, 
             'sender_type'     => 'App\Models\Guardian', 
             'receiver_id'     => $request->receiver_id,
             'receiver_type'   => 'App\Models\Teacher', 
@@ -124,10 +123,9 @@ class ParentController extends Controller
     }
 
     // ==========================================
-    // 4. FULL NOTICES PAGE
+    // 4. NOTICES PAGE
     // ==========================================
     public function notices() {
-        // FIXED: Changed 'date' to 'start_date' so it won't crash!
         $notices = Event::orderBy('start_date', 'desc')->paginate(10);
         return view('parent.notices', compact('notices'));
     }
@@ -157,33 +155,37 @@ class ParentController extends Controller
     }
 
     // ==========================================
-    // 6. NEW: UPLOAD RECEIPT FUNCTION
+    // 6. UPLOAD RECEIPT
     // ==========================================
     public function uploadReceipt(Request $request) {
         $request->validate([
             'amount' => 'required|numeric',
-            // Temporarily removed the 'required' rule for the file until your form is fully set up for it, 
-            // just to prevent immediate errors while testing.
         ]);
-
-        // Logic to save the receipt to the DB goes here!
         
         return back()->with('success', 'Receipt uploaded successfully! Waiting for Admin approval.');
     }
 
     // ==========================================
-    // 7. NEW: EVENTS CALENDAR PAGE
+    // 7. EVENTS CALENDAR (FIXED FOR UTC+8 TALLY)
     // ==========================================
     public function events() {
-    // 1. Fetch Events for the Calendar
-    $upcomingEvents = Event::where('start_date', '>=', now()->startOfDay())
-                           ->orderBy('start_date', 'asc')
-                           ->get();
+        // Fetch and normalize dates to prevent UTC+8 timezone shifts in JS
+        $upcomingEvents = Event::where('start_date', '>=', now()->startOfDay())
+            ->orderBy('start_date', 'asc')
+            ->get()
+            ->map(function($event) {
+                return [
+                    'title' => $event->title,
+                    'description' => $event->description,
+                    // Force simple string date so JS doesn't shift it
+                    'date_only' => Carbon::parse($event->start_date)->toDateString(),
+                    'theme' => $event->theme,
+                    'start_date_raw' => $event->start_date 
+                ];
+            });
 
-    // 2. Fetch General Notices/Announcements (Latest first)
-    // You can filter these by category if your DB supports it
-    $allNotices = Event::latest()->paginate(5);
+        $allNotices = Event::latest()->paginate(5);
 
-    return view('parent.events', compact('upcomingEvents', 'allNotices'));
-}
+        return view('parent.events', compact('upcomingEvents', 'allNotices'));
     }
+}

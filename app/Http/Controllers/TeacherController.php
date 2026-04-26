@@ -10,7 +10,7 @@ use App\Models\Classroom;
 use App\Models\Message;   
 use App\Models\Guardian;  
 use App\Models\Teacher;
-use Carbon\Carbon; // <-- Added for date checking
+use Carbon\Carbon;
 
 class TeacherController extends Controller
 {
@@ -19,8 +19,12 @@ class TeacherController extends Controller
     // ==========================================
     public function dashboard() {
         try {
-            // 1. Get Logged in Teacher
+            // 1. Get Logged in Teacher with strict guard check
             $teacher = Auth::guard('teacher')->user(); 
+
+            if (!$teacher) {
+                return redirect()->route('login');
+            }
 
             // Initialize defaults
             $assignedClass = 'No Class Assigned';
@@ -28,37 +32,32 @@ class TeacherController extends Controller
             $attendanceMarked = false;
             $unreadMessages = 0;
 
-            if ($teacher) {
-                // 2. Find the teacher's assigned class
-                // (Assuming Classroom model has a 'teacher_id'. If not, we just grab the first class as a fallback)
-                $classroom = Classroom::where('teacher_id', $teacher->teacher_id)->first() ?? Classroom::first();
+            // 2. Find the teacher's assigned class
+            $classroom = Classroom::where('teacher_id', $teacher->teacher_id)->first();
 
-                if ($classroom) {
-                    $assignedClass = $classroom->class_name;
-                    $totalStudents = Student::where('class_id', $classroom->class_id)->count();
+            if ($classroom) {
+                $assignedClass = $classroom->class_name;
+                $totalStudents = Student::where('class_id', $classroom->class_id)->count();
 
-                    // 3. Check if attendance was marked TODAY for this class
-                    $attendanceMarked = Attendance::where('class_id', $classroom->class_id)
-                                                  ->whereDate('date', Carbon::today())
-                                                  ->exists();
-                }
-
-                // 4. Count unread messages for this specific teacher
-                $unreadMessages = Message::where('receiver_id', $teacher->teacher_id)
-                                         ->where('receiver_type', 'App\Models\Teacher')
-                                         ->whereNull('read_at')
-                                         ->count();
+                // 3. Check if attendance was marked TODAY for this class (UTC+8 Safe)
+                $attendanceMarked = Attendance::where('class_id', $classroom->class_id)
+                    ->whereDate('date', Carbon::today('Asia/Kuala_Lumpur'))
+                    ->exists();
             }
 
+            // 4. Count unread messages for this specific teacher
+            $unreadMessages = Message::where('receiver_id', $teacher->teacher_id)
+                ->where('receiver_type', 'App\Models\Teacher')
+                ->whereNull('read_at')
+                ->count();
+
         } catch (\Exception $e) {
-            // Fallback if database tables aren't fully set up yet
-            $assignedClass = 'Database Error';
+            $assignedClass = 'System Error';
             $totalStudents = 0;
             $attendanceMarked = false;
             $unreadMessages = 0;
         }
 
-        // Pass everything to the new dashboard view!
         return view('teacher.dashboard', compact(
             'assignedClass', 
             'totalStudents', 
@@ -71,24 +70,25 @@ class TeacherController extends Controller
     // ATTENDANCE MANAGEMENT 
     // ==========================================
     public function attendance(Request $request) {
+        $teacher = Auth::guard('teacher')->user();
+        if (!$teacher) return redirect()->route('login');
+
+        // Logic: Show all classes, but highlight the teacher's own class by default
         $classes = Classroom::all();
         $selectedClass = null;
-        $selectedDate = null;
+        $selectedDate = $request->get('attendance_date', Carbon::today('Asia/Kuala_Lumpur')->toDateString());
         $students = [];
 
-        if ($request->has('class_id') && $request->has('attendance_date')) {
+        if ($request->has('class_id')) {
             $classId = $request->class_id;
-            $date = $request->attendance_date;
-
             $selectedClass = Classroom::find($classId);
-            $selectedDate = $date;
 
             $students = Student::where('class_id', $classId)
                 ->get()
-                ->map(function($student) use ($date) {
+                ->map(function($student) use ($selectedDate) {
                     $attendance = Attendance::where('student_id', $student->student_id)
-                                          ->where('date', $date)
-                                          ->first();
+                        ->where('date', $selectedDate)
+                        ->first();
                     $student->setRelation('attendance', $attendance);
                     return $student;
                 });
@@ -107,43 +107,58 @@ class TeacherController extends Controller
         foreach ($request->attendances as $studentId => $data) {
             Attendance::updateOrCreate(
                 ['student_id' => $studentId, 'date' => $request->attendance_date],
-                ['class_id' => $request->class_id, 'status' => $data['status'], 'reason' => $data['reason'] ?? null]
+                [
+                    'class_id' => $request->class_id, 
+                    'status'   => $data['status'], 
+                    'reason'   => $data['reason'] ?? null
+                ]
             );
         }
 
-        return back()->with('success', 'Attendance Synced Successfully!');
+        return back()->with('success', 'Attendance records updated successfully!');
     }
 
     // ==========================================
     // GRADING
     // ==========================================
     public function grading() {
-        $students = Student::all();
+        $teacher = Auth::guard('teacher')->user();
+        if (!$teacher) return redirect()->route('login');
+
+        // Logic: Teachers usually grade students in their own assigned class
+        $classroom = Classroom::where('teacher_id', $teacher->teacher_id)->first();
+        $students = $classroom ? Student::where('class_id', $classroom->class_id)->get() : collect();
+
         return view('teacher.grading', compact('students'));
     }
 
     public function storeGrade(Request $request) {
-        return back()->with('success', 'Grades Saved Successfully');
+        return back()->with('success', 'Academic records updated.');
     }
 
     // ==========================================
     // COMMUNICATION (Chat)
     // ==========================================
     public function communication(Request $request) {
-        // 1. Get Logged in Teacher
         $teacher = Auth::guard('teacher')->user(); 
+        if (!$teacher) return redirect()->route('login');
 
-        // 2. Get List of Guardians
-        $parents = Guardian::all(); 
+        // 1. Get List of Guardians linked to students
+        $parents = Guardian::orderBy('parent_name', 'asc')->get(); 
 
-        // 3. Determine Active Parent
+        // 2. Determine Active Parent
         $parentId = $request->get('parent_id', $parents->first()->parent_id ?? null);
-        
         $activeParent = $parents->where('parent_id', $parentId)->first();
 
-        // 4. Fetch Conversation
+        // 3. Fetch Conversation and Mark as Read
         $messages = [];
-        if($activeParent && $teacher) {
+        if($activeParent) {
+            // Logic: Mark incoming messages from this parent as read
+            Message::where('sender_id', $activeParent->parent_id)
+                ->where('receiver_id', $teacher->teacher_id)
+                ->where('receiver_type', 'App\Models\Teacher')
+                ->update(['read_at' => now()]);
+
             $messages = Message::conversation(
                 $teacher->teacher_id, 'App\Models\Teacher', 
                 $activeParent->parent_id, 'App\Models\Guardian'
@@ -166,10 +181,8 @@ class TeacherController extends Controller
         Message::create([
             'sender_id'       => $teacher->teacher_id,
             'sender_type'     => 'App\Models\Teacher',
-            
             'receiver_id'     => $request->receiver_id,
             'receiver_type'   => 'App\Models\Guardian', 
-            
             'message_content' => $request->message,
             'read_at'         => null
         ]);
