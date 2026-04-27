@@ -125,11 +125,11 @@
                             </a>
                         </td>
                         <td class="text-end pe-4">
-                            <form action="{{ route('admin.finance.approve', $p->id) }}" method="POST" class="d-inline">
+                            <form action="{{ route('admin.finance.approve', $p->payment_id) }}" method="POST" class="d-inline">
                                 @csrf
                                 <button type="submit" class="btn btn-sm btn-success rounded-pill px-3">Approve</button>
                             </form>
-                            <button class="btn btn-sm btn-outline-danger rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#rejectModal{{$p->id}}">Reject</button>
+                            <button class="btn btn-sm btn-outline-danger rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#rejectModal{{$p->payment_id}}">Reject</button>
                         </td>
                     </tr>
                     @empty
@@ -336,9 +336,9 @@
 </div>
 
 @foreach($pendingPayments ?? [] as $p)
-<div class="modal fade" id="rejectModal{{$p->id}}" tabindex="-1">
+<div class="modal fade" id="rejectModal{{$p->payment_id}}" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <form class="modal-content border-0 shadow" action="{{ route('admin.finance.reject', $p->id) }}" method="POST">
+        <form class="modal-content border-0 shadow" action="{{ route('admin.finance.reject', $p->payment_id) }}" method="POST">
             @csrf
             <div class="modal-header bg-dark text-white">
                 <h5 class="modal-title">Reject Payment</h5>

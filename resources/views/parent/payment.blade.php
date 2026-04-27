@@ -40,17 +40,22 @@
             <p class="text-muted small mb-0">Manage fees for your registered children.</p>
         </div>
         <div class="text-end">
-            <span class="d-block fw-bold text-dark">{{ auth()->user()->parent_name ?? 'Ali bin Abu' }}</span>
+            <span class="d-block fw-bold text-dark">{{ auth()->user()->parent_name }}</span>
             <small class="text-muted">Parent Portal</small>
         </div>
     </div>
 
+    @php
+        $totalOutstanding = $pendingInvoices->sum('amount');
+        $lastPayment = $paymentHistory->first();
+    @endphp
+
     <div class="row g-4 mb-4">
         <div class="col-md-6">
             <div class="card card-soft bg-gradient-danger h-100 p-4 position-relative overflow-hidden">
-                <span class="text-uppercase fw-bold mb-2" style="font-size: 0.8rem; letter-spacing: 1px;"><i class="bi bi-exclamation-circle me-2"></i> Total Outstanding</span>
-                <h1 class="display-5 fw-bold mb-0">RM 150.00</h1>
-                <p class="mb-0 mt-2 opacity-75 small">Due by: 05 May 2026</p>
+                <span class="text-uppercase fw-bold mb-2" style="font-size: 0.8rem; letter-spacing: 1px;"><i class="bi bi-exclamation-circle me-2"></i> Total Outstanding / Pending</span>
+                <h1 class="display-5 fw-bold mb-0">RM {{ number_format($totalOutstanding, 2) }}</h1>
+                <p class="mb-0 mt-2 opacity-75 small">Verify payments promptly to avoid arrears.</p>
                 <i class="bi bi-wallet2 position-absolute text-white" style="font-size: 8rem; opacity: 0.1; right: -20px; bottom: -20px;"></i>
             </div>
         </div>
@@ -58,8 +63,13 @@
         <div class="col-md-6">
             <div class="card card-soft bg-white border border-light h-100 p-4">
                 <span class="text-uppercase text-muted fw-bold mb-2" style="font-size: 0.8rem; letter-spacing: 1px;"><i class="bi bi-check-circle-fill text-success me-2"></i> Last Payment Received</span>
-                <h2 class="fw-bold text-dark mb-0 mt-2">RM 80.00</h2>
-                <p class="text-muted mb-0 mt-1 small">Paid on 02 Apr 2026 for "Yuran Bulanan (April)"</p>
+                @if($lastPayment)
+                    <h2 class="fw-bold text-dark mb-0 mt-2">RM {{ number_format($lastPayment->amount, 2) }}</h2>
+                    <p class="text-muted mb-0 mt-1 small">Approved on {{ $lastPayment->updated_at->format('d M Y') }}</p>
+                @else
+                    <h2 class="fw-bold text-dark mb-0 mt-2">RM 0.00</h2>
+                    <p class="text-muted mb-0 mt-1 small">No previous payment records found.</p>
+                @endif
             </div>
         </div>
     </div>
@@ -68,41 +78,41 @@
         <div class="col-lg-8">
             <div class="card card-soft">
                 <div class="card-header bg-white p-4 border-bottom-0 d-flex justify-content-between align-items-center">
-                    <h5 class="fw-bold mb-0 text-dark">Current Invoices</h5>
-                    <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-2">2 Unpaid Items</span>
+                    <h5 class="fw-bold mb-0 text-dark">Current / Pending Invoices</h5>
+                    <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-2">{{ count($pendingInvoices) }} Items</span>
                 </div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush">
                         
+                        @forelse($pendingInvoices as $invoice)
                         <div class="list-group-item invoice-item p-4 border-top border-bottom-0">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <h6 class="fw-bold text-dark mb-1">Yuran Bulanan (Mei)</h6>
-                                    <p class="text-muted small mb-0">Student: <strong>Ahmad bin Ali</strong> (Kelas Mawar)</p>
+                                    <h6 class="fw-bold text-dark mb-1">{{ $invoice->admin_remarks ?? 'Monthly Fee' }}</h6>
+                                    <p class="text-muted small mb-0">Student: <strong>{{ $invoice->student->student_name ?? 'N/A' }}</strong></p>
+                                    @if($invoice->status == 'Pending')
+                                        <span class="badge bg-warning text-dark mt-2">Processing by Admin</span>
+                                    @else
+                                        <span class="badge bg-danger mt-2">Unpaid</span>
+                                    @endif
                                 </div>
                                 <div class="text-end">
-                                    <h5 class="fw-bold text-danger mb-1">RM 50.00</h5>
+                                    <h5 class="fw-bold text-danger mb-1">RM {{ number_format($invoice->amount, 2) }}</h5>
                                 </div>
                             </div>
                         </div>
-
-                        <div class="list-group-item invoice-item p-4 border-top border-bottom-0">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h6 class="fw-bold text-dark mb-1">Pakej Buku Latihan Semester 1</h6>
-                                    <p class="text-muted small mb-0">Student: <strong>Ahmad bin Ali</strong> (Kelas Mawar)</p>
-                                </div>
-                                <div class="text-end">
-                                    <h5 class="fw-bold text-danger mb-1">RM 100.00</h5>
-                                </div>
-                            </div>
+                        @empty
+                        <div class="text-center p-5 text-muted">
+                            <i class="bi bi-check-circle fs-1 text-success opacity-50 mb-3 d-block"></i>
+                            You have no pending payments!
                         </div>
+                        @endforelse
 
                     </div>
                 </div>
                 <div class="card-footer bg-light p-4 border-top">
                     <div class="d-flex justify-content-between align-items-center">
-                        <span class="text-muted small">Please make payment to: <strong>Maybank 123456789 (Tabika Kemas BMN)</strong></span>
+                        <span class="text-muted small">Please make payment to: <strong>Maybank 1623 4567 8910 (Tabika Kemas BMN)</strong></span>
                         <button class="btn btn-primary fw-bold px-4 py-2 shadow-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#paymentModal">
                             <i class="bi bi-upload me-2"></i> Submit Payment Proof
                         </button>
@@ -119,33 +129,25 @@
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush">
                         
+                        @forelse($paymentHistory as $history)
                         <div class="list-group-item p-4 border-top border-bottom-0">
                             <div class="d-flex align-items-start">
                                 <div class="bg-success bg-opacity-10 text-success p-2 rounded-circle me-3">
                                     <i class="bi bi-receipt"></i>
                                 </div>
                                 <div>
-                                    <h6 class="fw-bold text-dark mb-1">RM 80.00</h6>
-                                    <p class="text-muted small mb-1">Yuran Bulanan (April)</p>
+                                    <h6 class="fw-bold text-dark mb-1">RM {{ number_format($history->amount, 2) }}</h6>
+                                    <p class="text-muted small mb-1">{{ $history->admin_remarks ?? 'School Fee' }}</p>
                                     <span class="badge bg-success small">Approved</span>
-                                    <small class="text-muted d-block mt-1">02 Apr 2026</small>
+                                    <small class="text-muted d-block mt-1">{{ $history->updated_at->format('d M Y') }}</small>
                                 </div>
                             </div>
                         </div>
-
-                        <div class="list-group-item p-4 border-top border-bottom-0">
-                            <div class="d-flex align-items-start">
-                                <div class="bg-secondary bg-opacity-10 text-secondary p-2 rounded-circle me-3">
-                                    <i class="bi bi-receipt"></i>
-                                </div>
-                                <div>
-                                    <h6 class="fw-bold text-dark mb-1">RM 150.00</h6>
-                                    <p class="text-muted small mb-1">Yuran Pendaftaran Tahunan</p>
-                                    <span class="badge bg-success small">Approved</span>
-                                    <small class="text-muted d-block mt-1">05 Jan 2026</small>
-                                </div>
-                            </div>
+                        @empty
+                        <div class="p-4 text-center text-muted small">
+                            No payment history found.
                         </div>
+                        @endforelse
 
                     </div>
                 </div>
@@ -156,7 +158,7 @@
 
 <div class="modal fade" id="paymentModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <form class="modal-content border-0 shadow" method="POST" action="#" enctype="multipart/form-data">
+        <form class="modal-content border-0 shadow" method="POST" action="{{ route('parent.payment.upload') }}" enctype="multipart/form-data">
             @csrf
             <div class="modal-header bg-primary text-white border-0">
                 <h5 class="modal-title fw-bold"><i class="bi bi-cloud-arrow-up-fill me-2"></i> Submit Payment Receipt</h5>
@@ -179,16 +181,16 @@
                 </div>
                 
                 <div class="mb-4">
-                    <label class="small fw-bold text-muted mb-2">Reference / Notes (Optional)</label>
-                    <input type="text" name="reference" class="form-control border-0 shadow-sm py-2" placeholder="e.g. Yuran Ahmad Mei & Buku">
+                    <label class="small fw-bold text-muted mb-2">Reference / Notes</label>
+                    <input type="text" name="reference" class="form-control border-0 shadow-sm py-2" placeholder="e.g. Yuran Ahmad Mei & Buku" required>
                 </div>
 
-                <label class="small fw-bold text-muted mb-2">Upload Bank Receipt (PDF/JPG/PNG)</label>
+                <label class="small fw-bold text-muted mb-2">Upload Bank Receipt (JPG/PNG)</label>
                 <div class="file-upload-box" onclick="document.getElementById('receiptInput').click()">
                     <i class="bi bi-cloud-arrow-up text-primary" style="font-size: 2.5rem;"></i>
                     <h6 class="fw-bold mt-2 text-dark">Click to browse files</h6>
                     <small class="text-muted">Max file size: 2MB</small>
-                    <input type="file" name="receipt" id="receiptInput" class="d-none" accept=".pdf,.jpg,.jpeg,.png" onchange="updateFileName(this)" required>
+                    <input type="file" name="receipt" id="receiptInput" class="d-none" accept=".jpg,.jpeg,.png" onchange="updateFileName(this)" required>
                 </div>
                 <div id="fileNameDisplay" class="text-center mt-2 small fw-bold text-success"></div>
 

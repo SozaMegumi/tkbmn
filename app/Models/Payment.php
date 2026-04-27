@@ -22,6 +22,11 @@ class Payment extends Model
         'reference_number',
         'payment_date',
         'status',
+        
+        // --- ADDED THESE TO FIX THE SQL ERROR & FILE UPLOADS ---
+        'title',
+        'receipt_path',
+        'admin_remarks',
     ];
 
     protected $casts = [
@@ -31,5 +36,14 @@ class Payment extends Model
     public function invoice()
     {
         return $this->belongsTo(Invoice::class, 'invoice_id');
+    }
+
+    // --- ADDED STUDENT RELATIONSHIP ---
+    // The AdminController uses $payment->student->student_name in the pending table.
+    // Without this, Laravel won't know how to find the student details!
+    public function student()
+    {
+        // Assuming your Student model's primary key is 'student_id'
+        return $this->belongsTo(Student::class, 'student_id', 'student_id'); 
     }
 }

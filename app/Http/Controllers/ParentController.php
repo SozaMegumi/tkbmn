@@ -141,8 +141,9 @@ class ParentController extends Controller
             return view('parent.payment', ['pendingInvoices' => [], 'paymentHistory' => []]);
         }
 
+        // FIXED: Added 'Pending' to the array so parents can still see invoices waiting for Admin approval
         $pendingInvoices = Payment::where('student_id', $student->student_id)
-                                  ->where('status', 'Unpaid')
+                                  ->whereIn('status', ['Unpaid', 'Pending']) 
                                   ->orderBy('created_at', 'desc')
                                   ->get();
 
@@ -158,13 +159,37 @@ class ParentController extends Controller
     // 6. UPLOAD RECEIPT
     // ==========================================
     public function uploadReceipt(Request $request) {
+        // 1. Validate the file type and size to prevent errors
         $request->validate([
-            'amount' => 'required|numeric',
+            'amount' => 'required|numeric|min:1',
+            'receipt' => 'required|file|mimes:pdf,jpg,jpeg,png|max:2048', // Max 2MB
         ]);
         
-        return back()->with('success', 'Receipt uploaded successfully! Waiting for Admin approval.');
-    }
+        $parent = Auth::guard('parent')->user();
+        $student = Student::where('parent_id', $parent->parent_id)->first();
 
+        if(!$student) {
+            return back()->with('error', 'Cannot process payment. No student assigned to your account.');
+        }
+
+        // 2. Store the uploaded file safely in the public disk
+        $receiptPath = null;
+        if ($request->hasFile('receipt')) {
+            $receiptPath = $request->file('receipt')->store('receipts', 'public');
+        }
+
+        // 3. Create the Pending Payment record for Admin Verification
+        Payment::create([
+            'student_id' => $student->student_id,
+            'title' => $request->reference ?? 'Monthly Fee Payment', // FIXED: Added 'title' to prevent SQL Error
+            'amount' => $request->amount,
+            'receipt_path' => $receiptPath,
+            'status' => 'Pending', // Triggers visibility in Admin Dashboard
+            'admin_remarks' => $request->reference ?? 'Monthly Fee Payment' 
+        ]);
+
+        return back()->with('success', 'Receipt uploaded successfully! Waiting for Admin verification.');
+    }
     // ==========================================
     // 7. EVENTS CALENDAR (FIXED FOR UTC+8 TALLY)
     // ==========================================
