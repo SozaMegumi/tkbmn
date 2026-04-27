@@ -62,19 +62,12 @@
         </div>
     </div>
 
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm rounded-3 mb-4">
-            <i class="bi bi-check-circle-fill me-2"></i> {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
     <div class="row g-4 mb-4">
         <div class="col-lg-6">
             <div class="card card-soft bg-gradient-primary h-100 p-4">
                 <div class="d-flex flex-column h-100 justify-content-center position-relative">
                     <span class="stat-label mb-2"><i class="bi bi-wallet2 me-2"></i> Current School Budget</span>
-                    <h1 class="display-amount mb-0">RM {{ number_format($currentBalance ?? 80.00, 2) }}</h1>
+                    <h1 class="display-amount mb-0">RM {{ number_format($currentBalance ?? 0.00, 2) }}</h1>
                     <p class="mt-2 mb-0 opacity-75 small"><i class="bi bi-check-circle me-1"></i> Funds available for use.</p>
                     <i class="bi bi-cash-stack position-absolute text-white" style="font-size: 10rem; opacity: 0.1; right: -20px; bottom: -30px;"></i>
                 </div>
@@ -88,7 +81,7 @@
                         <i class="bi bi-graph-up-arrow"></i>
                     </div>
                     <span class="text-muted small text-uppercase fw-bold">Total Income</span>
-                    <h3 class="fw-bold text-dark mt-1">RM {{ number_format($totalIncome ?? 100.00, 2) }}</h3>
+                    <h3 class="fw-bold text-dark mt-1">RM {{ number_format($totalIncome ?? 0.00, 2) }}</h3>
                 </div>
             </div>
         </div>
@@ -100,9 +93,52 @@
                         <i class="bi bi-graph-down-arrow"></i>
                     </div>
                     <span class="text-muted small text-uppercase fw-bold">Total Expenses</span>
-                    <h3 class="fw-bold text-dark mt-1">RM {{ number_format($totalExpense ?? 20.00, 2) }}</h3>
+                    <h3 class="fw-bold text-dark mt-1">RM {{ number_format($totalExpense ?? 0.00, 2) }}</h3>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="card card-soft bg-white mb-4 border-warning">
+        <div class="card-header bg-warning bg-opacity-10 p-4 border-0">
+            <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-clock-history me-2"></i> Pending Parent Payments</h5>
+            <small class="text-muted">Verify receipts before approving income into finance.</small>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr class="bg-light">
+                        <th class="ps-4">Student</th>
+                        <th>Amount (RM)</th>
+                        <th>Receipt Reference</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($pendingPayments ?? [] as $p)
+                    <tr>
+                        <td class="ps-4 font-weight-bold">{{ $p->student->student_name }}</td>
+                        <td>RM {{ number_format($p->amount, 2) }}</td>
+                        <td>
+                            <a href="{{ asset('storage/' . $p->receipt_path) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-file-earmark-image"></i> View Receipt
+                            </a>
+                        </td>
+                        <td class="text-end pe-4">
+                            <form action="{{ route('admin.finance.approve', $p->id) }}" method="POST" class="d-inline">
+                                @csrf
+                                <button type="submit" class="btn btn-sm btn-success rounded-pill px-3">Approve</button>
+                            </form>
+                            <button class="btn btn-sm btn-outline-danger rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#rejectModal{{$p->id}}">Reject</button>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-muted small">No pending parent payments to verify.</td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -177,7 +213,7 @@
                             {{ $t->type == 'income' ? '+' : '-' }} RM {{ number_format($t->amount, 2) }}
                         </td>
                         <td class="text-end pe-4">
-                            <form action="{{ route('admin.finance.delete', $t->transaction_id ?? 1) }}" method="POST" onsubmit="return confirm('Delete this record?');">
+                            <form action="{{ route('admin.finance.delete', $t->transaction_id ?? $t->id) }}" method="POST" onsubmit="return confirm('Delete this record?');">
                                 @csrf @method('DELETE')
                                 <button class="btn btn-sm btn-link text-muted hover-danger p-0" title="Delete">
                                     <i class="bi bi-trash-fill"></i>
@@ -299,107 +335,74 @@
     </div>
 </div>
 
+@foreach($pendingPayments ?? [] as $p)
+<div class="modal fade" id="rejectModal{{$p->id}}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content border-0 shadow" action="{{ route('admin.finance.reject', $p->id) }}" method="POST">
+            @csrf
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">Reject Payment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <label class="small fw-bold">Reason for Rejection</label>
+                <textarea name="remarks" class="form-control" placeholder="e.g. Blurry receipt, incorrect amount" required></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-danger w-100 rounded-pill">Confirm Reject</button>
+            </div>
+        </form>
+    </div>
+</div>
+@endforeach
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // 1. Declare chart variables globally so we can update them later
-    let cashFlowChartInstance = null;
-    let expenseChartInstance = null;
 
-    // 2. Simulated Database Data for the different timeframe options
-    const chartData = {
-        '6months': {
-            labels: ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'],
-            income: [2500, 2600, 2400, 4500, 2800, 3100],
-            expense: [1800, 1950, 1700, 2100, 1850, 2000]
-        },
-        'thisyear': {
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-            income: [4500, 2800, 3100, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Zeros for future months
-            expense: [2100, 1850, 2000, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        }
-    };
+let cashFlowChartInstance = null;
 
-    // Initialize charts when the page loads
-    document.addEventListener('DOMContentLoaded', function() {
-        initCharts('6months'); // Start with 6 months as default
-    });
+async function updateChartData() {
+    const timeframe = document.getElementById('timeframeFilter').value;
+    
+    // Fetch real data from the controller via AJAX
+    const response = await fetch(`{{ route('admin.finance.chart-data') }}?timeframe=${timeframe}`);
+    const data = await response.json();
 
-    function initCharts(timeframe) {
-        const dataToLoad = chartData[timeframe];
+    if (cashFlowChartInstance) {
+        cashFlowChartInstance.destroy(); // Clean old chart before re-drawing
+    }
 
-        // Cash Flow Bar Chart
-        const ctxFlow = document.getElementById('cashFlowChart').getContext('2d');
-        cashFlowChartInstance = new Chart(ctxFlow, {
-            type: 'bar',
-            data: {
-                labels: dataToLoad.labels,
-                datasets: [
-                    {
-                        label: 'Income (RM)',
-                        data: dataToLoad.income,
-                        backgroundColor: 'rgba(25, 135, 84, 0.8)', 
-                        borderRadius: 4
-                    },
-                    {
-                        label: 'Expenses (RM)',
-                        data: dataToLoad.expense,
-                        backgroundColor: 'rgba(220, 53, 69, 0.8)', 
-                        borderRadius: 4
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'top', align: 'end' }
+    const ctx = document.getElementById('cashFlowChart').getContext('2d');
+    cashFlowChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [
+                {
+                    label: 'Income (RM)',
+                    data: data.income,
+                    backgroundColor: 'rgba(25, 135, 84, 0.8)',
+                    borderRadius: 4
                 },
-                scales: {
-                    y: { beginAtZero: true, grid: { borderDash: [2, 4] } },
-                    x: { grid: { display: false } }
+                {
+                    label: 'Expenses (RM)',
+                    data: data.expense,
+                    backgroundColor: 'rgba(220, 53, 69, 0.8)',
+                    borderRadius: 4
                 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, grid: { borderDash: [2, 4] } }
             }
-        });
+        }
+    });
+}
 
-        // Expense Breakdown Doughnut Chart
-        const ctxExpense = document.getElementById('expenseChart').getContext('2d');
-        expenseChartInstance = new Chart(ctxExpense, {
-            type: 'doughnut',
-            data: {
-                labels: ['Food & Kitchen', 'Salary', 'Utility Bills', 'Stationary', 'Maintenance'],
-                datasets: [{
-                    data: [800, 4500, 350, 150, 200], 
-                    backgroundColor: ['#ff9f43', '#ea5455', '#7367f0', '#00cfe8', '#28c76f'],
-                    borderWidth: 0,
-                    hoverOffset: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '75%',
-                plugins: {
-                    legend: { 
-                        position: 'bottom',
-                        labels: { boxWidth: 12, padding: 15, font: { size: 11 } }
-                    }
-                }
-            }
-        });
-    }
-
-    // 3. This function runs when the dropdown changes
-    function updateChartData() {
-        const selectedTimeframe = document.getElementById('timeframeFilter').value;
-        const newData = chartData[selectedTimeframe];
-
-        // Update the chart's data properties
-        cashFlowChartInstance.data.labels = newData.labels;
-        cashFlowChartInstance.data.datasets[0].data = newData.income;
-        cashFlowChartInstance.data.datasets[1].data = newData.expense;
-
-        // Tell Chart.js to animate and re-render the changes
-        cashFlowChartInstance.update();
-    }
+// Load default data on page startup
+document.addEventListener('DOMContentLoaded', updateChartData);
 </script>
 @endsection

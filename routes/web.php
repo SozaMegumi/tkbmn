@@ -59,10 +59,17 @@ Route::middleware('auth:admin')->prefix('admin')->name('admin.')->group(function
     Route::get('/exams', [AdminController::class, 'exams'])->name('exams');
     Route::post('/exams/store', [AdminController::class, 'storeExam'])->name('exams.store');
 
-    // --- 8.0 FINANCE ---
+    // --- 8.0 FINANCE (Process 8.0: Payment Management) ---
     Route::get('/finance', [AdminController::class, 'finance'])->name('finance');
     Route::post('/finance/store', [AdminController::class, 'storeTransaction'])->name('finance.store');
     Route::delete('/finance/delete/{id}', [AdminController::class, 'deleteTransaction'])->name('finance.delete');
+    
+    // ADDED: Logic for Parent Receipt Approvals (DFD Store 12 & 13)
+    Route::post('/finance/approve/{id}', [AdminController::class, 'approvePayment'])->name('finance.approve');
+    Route::post('/finance/reject/{id}', [AdminController::class, 'rejectPayment'])->name('finance.reject');
+    
+    // ADDED: AJAX Cash Flow Data for dynamic monitoring (Process 9.0)
+    Route::get('/finance/chart-data', [AdminController::class, 'getCashFlowData'])->name('finance.chart-data');
 
     // Process 9.0: Reports
     Route::get('/reports', [AdminController::class, 'reports'])->name('reports');
@@ -96,23 +103,18 @@ Route::middleware('auth:teacher')->prefix('teacher')->name('teacher.')->group(fu
 // --- PARENT PORTAL ROUTING ---
 Route::middleware('auth:parent')->prefix('parent')->name('parent.')->group(function () {
     
-    // 1. The Dashboard (Widgets)
     Route::get('/dashboard', [ParentController::class, 'dashboard'])->name('dashboard');
     
-    // 2. Full Screen Chat
+    // Full Screen Chat
     Route::get('/chat', [ParentController::class, 'chat'])->name('communication'); 
     Route::post('/chat/send', [ParentController::class, 'sendMessage'])->name('chat.send');
 
-    // 3. Full Screen Payment/Finance
+    // Full Screen Payment/Finance (Process 8.0: Payment Info Flow)
     Route::get('/payment', [ParentController::class, 'payment'])->name('payment');
-    // --> FIXED: Upload Route is now correctly placed here!
     Route::post('/payment/upload', [ParentController::class, 'uploadReceipt'])->name('payment.upload');
 
-    // 4. Full Screen Notices
     Route::get('/notices', [ParentController::class, 'notices'])->name('notices');
     
-    // 5. Events Calendar
-    // --> FIXED: Pulled out of the nested group
     Route::get('/events', [ParentController::class, 'events'])->name('events');
     
 });

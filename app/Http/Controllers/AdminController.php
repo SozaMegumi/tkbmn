@@ -8,29 +8,27 @@ use App\Models\Guardian;
 use App\Models\Student;
 use App\Models\Classroom;
 use App\Models\Event;
-use App\Models\Transaction;
+use App\Models\Transaction; 
+use App\Models\Payment;     
+use App\Models\Attendance;  
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth; // Added for secure ID retrieval
+use Illuminate\Support\Facades\Auth; 
 use Carbon\Carbon;
 
 class AdminController extends Controller
 {
     // ==========================================
-    // DASHBOARD
+    // DASHBOARD & OVERVIEW
     // ==========================================
     public function dashboard() {
         try {
-            // 1. Top Summary Stats
             $totalStudents = Student::count();
             $totalClasses  = Classroom::count();
             $pendingApprovals = Student::where('status', 'Pending')->count();
 
-            // 2. Recent Enrollments
             $recentEnrollments = Student::with('parent')->orderBy('created_at', 'desc')->take(5)->get();
 
-            // 3. Alerts & Tasks (Right Column)
             $alerts = [];
-            // Logic: Sync with UTC+8 to show events for the next 30 days
             $upcomingEvents = Event::where('start_date', '>=', now()->startOfDay())
                                   ->where('start_date', '<=', now()->addDays(30)->endOfDay())
                                   ->orderBy('start_date', 'asc')
@@ -42,12 +40,11 @@ class AdminController extends Controller
                     'icon' => $isHoliday ? 'bi-calendar-x-fill' : 'bi-bell-fill',
                     'color' => $isHoliday ? 'danger' : 'warning',
                     'title' => $isHoliday ? 'Upcoming Holiday' : 'Upcoming Event',
-                    // Format for UTC+8 display consistency
                     'message' => $event->title . ' is on ' . Carbon::parse($event->start_date)->format('d M Y') . '.'
                 ];
             }
 
-            // 4. WEEKLY ATTENDANCE DATA (Static placeholders for Chart.js)
+            // Standardize labels for the chart fallback
             $attendanceLabels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
             $attendanceData = [94, 91, 95, 89, 91];
 
@@ -65,6 +62,52 @@ class AdminController extends Controller
     }
 
     // ==========================================
+    // 9.0 REPORT MANAGEMENT (Process 9.0 in DFD)
+    // ==========================================
+    public function reports() { 
+        $stats = [
+            'total_income' => Transaction::where('type', 'income')->sum('amount'),
+            'monthly_attendance_avg' => Attendance::whereMonth('date', now()->month)
+                                        ->where('status', 'Present')->count(),
+            'enrollment_by_gender' => Student::selectRaw('gender, count(*) as total')
+                                        ->groupBy('gender')->get()
+        ];
+
+        return view('admin.reports', compact('stats')); 
+    }
+
+    /**
+     * AJAX METHOD: Fetch Real Cash Flow Data (Process 9.0)
+     */
+    public function getCashFlowData(Request $request) {
+        $monthsCount = $request->get('timeframe') === 'thisyear' ? 12 : 6;
+        $labels = [];
+        $incomeData = [];
+        $expenseData = [];
+
+        for ($i = $monthsCount - 1; $i >= 0; $i--) {
+            $date = now()->subMonths($i);
+            $labels[] = $date->format('M');
+
+            $incomeData[] = Transaction::where('type', 'income')
+                ->whereMonth('date', $date->month)
+                ->whereYear('date', $date->year)
+                ->sum('amount');
+
+            $expenseData[] = Transaction::where('type', 'expense')
+                ->whereMonth('date', $date->month)
+                ->whereYear('date', $date->year)
+                ->sum('amount');
+        }
+
+        return response()->json([
+            'labels' => $labels,
+            'income' => $incomeData,
+            'expense' => $expenseData
+        ]);
+    }
+
+    // ==========================================
     // 1.0 USER ACCOUNTS (Teachers & Parents)
     // ==========================================
     public function users() {
@@ -75,7 +118,6 @@ class AdminController extends Controller
     }
     
     public function storeUser(Request $request) {
-        // Safety: Ensure emails are unique across both tables
         $request->validate([
             'email' => 'required|email|unique:teachers,email|unique:guardians,email',
             'name' => 'required|string|max:255',
@@ -154,7 +196,6 @@ class AdminController extends Controller
     }
     
     public function storeStudent(Request $request) {
-        // Validation: Ensure linked IDs exist to prevent DB errors
         $request->validate([
             'student_name' => 'required|string',
             'mykid'        => 'required|unique:students,mykid',
@@ -179,18 +220,46 @@ class AdminController extends Controller
     }
 
     // ==========================================
-    // 8.0 FINANCE
+    // 8.0 FINANCE (Process 8.0 in DFD)
     // ==========================================
     public function finance() {
         $totalIncome = Transaction::where('type', 'income')->sum('amount');
         $totalExpense = Transaction::where('type', 'expense')->sum('amount');
-        
+        $pendingPayments = Payment::where('status', 'Pending')->with('student')->get();
+
         return view('admin.finance', [
             'totalIncome'    => $totalIncome,
             'totalExpense'   => $totalExpense,
             'currentBalance' => $totalIncome - $totalExpense,
-            'transactions'   => Transaction::orderBy('date', 'desc')->get()
+            'transactions'   => Transaction::orderBy('date', 'desc')->get(),
+            'pendingPayments' => $pendingPayments
         ]);
+    }
+
+    public function approvePayment($id) {
+        $payment = Payment::findOrFail($id);
+        $payment->update(['status' => 'Paid']);
+
+        // Link parent receipt verification directly to school income
+        Transaction::create([
+            'type' => 'income',
+            'amount' => $payment->amount,
+            'category' => 'School Fees',
+            'date' => now(),
+            'description' => "Fee payment for " . ($payment->student->student_name ?? 'Student')
+        ]);
+
+        return back()->with('success', 'Payment approved and recorded in finance.');
+    }
+
+    public function rejectPayment(Request $request, $id) {
+        $payment = Payment::findOrFail($id);
+        $payment->update([
+            'status' => 'Unpaid',
+            'admin_remarks' => $request->remarks 
+        ]);
+
+        return back()->with('error', 'Payment rejected. Parent has been notified.');
     }
 
     public function storeTransaction(Request $request) {
@@ -205,8 +274,14 @@ class AdminController extends Controller
         return back()->with('success', 'Transaction Recorded Successfully!');
     }
 
+    public function deleteTransaction($id) {
+        $transaction = Transaction::findOrFail($id);
+        $transaction->delete();
+        return back()->with('success', 'Transaction record deleted successfully.');
+    }
+
     // ==========================================
-    // 10.0 SCHOOL EVENTS (CRUD) - SYNCED WITH PARENT CALENDAR
+    // 10.0 SCHOOL EVENTS
     // ==========================================
     public function events() {
         return view('admin.events', ['events' => Event::orderBy('start_date', 'asc')->get()]);
@@ -216,13 +291,12 @@ class AdminController extends Controller
         $request->validate([
             'title' => 'required|string|max:255',
             'start_date' => 'required|date',
-            'theme' => 'required|in:primary,danger' // primary=Activity, danger=Holiday
+            'theme' => 'required|in:primary,danger'
         ]);
 
         Event::create([
             'title'       => $request->title,
             'description' => $request->description,
-            // Logic: Strip time for strict UTC+8 calendar tallying
             'start_date'  => Carbon::parse($request->start_date)->toDateString(),
             'end_date'    => $request->end_date ? Carbon::parse($request->end_date)->toDateString() : Carbon::parse($request->start_date)->toDateString(),
             'theme'       => $request->theme,
@@ -230,18 +304,6 @@ class AdminController extends Controller
         ]);
 
         return back()->with('success', 'Event Posted Successfully!');
-    }
-
-    public function updateEvent(Request $request, $id) {
-        $event = Event::findOrFail($id);
-        $event->update([
-            'title'       => $request->title,
-            'description' => $request->description,
-            'start_date'  => Carbon::parse($request->start_date)->toDateString(),
-            'end_date'    => $request->end_date ? Carbon::parse($request->end_date)->toDateString() : $event->end_date,
-            'theme'       => $request->theme,
-        ]);
-        return back()->with('success', 'Event Updated Successfully!');
     }
 
     public function deleteEvent($id) {

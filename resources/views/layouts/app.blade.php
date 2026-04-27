@@ -180,16 +180,23 @@
         </div>
     </div>
 
-    <div class="main-content">
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert">
-                <i class="bi bi-check-circle-fill me-2"></i> {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        @endif
+  <div class="main-content">
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
 
-        @yield('content')
-    </div>
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
+    @yield('content')
+</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 </body>

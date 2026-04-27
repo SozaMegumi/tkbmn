@@ -134,9 +134,42 @@ class TeacherController extends Controller
     }
 
     public function storeGrade(Request $request) {
-        return back()->with('success', 'Grades updated for classroom.');
+    // Validate according to DFD Process 5.0 requirements
+    $request->validate([
+        'student_id'    => 'required|exists:students,student_id',
+        'subject_id'    => 'required|exists:subjects,subject_id',
+        'academic_year' => 'required',
+        'marks'         => 'required|numeric|min:0|max:100',
+        'hafazan_surah' => 'nullable|string', // Added for kindergarten logic
+    ]);
+
+    // 1. Store Academic Marks (Process 5.0: Assessment Management)
+    \App\Models\AssessmentResult::updateOrCreate(
+        [
+            'student_id' => $request->student_id, 
+            'subject_id' => $request->subject_id,
+            'academic_year_id' => $request->academic_year
+        ],
+        [
+            'marks' => $request->marks,
+            'teacher_id' => Auth::guard('teacher')->id()
+        ]
+    );
+
+    // 2. Store Hafazan/Academic Record (Process 5.0: Record Tallying)
+    if ($request->hafazan_surah) {
+        \App\Models\HafazanRecord::create([
+            'student_id' => $request->student_id,
+            'surah_name' => $request->hafazan_surah,
+            'status'     => 'Completed',
+            'recorded_at' => now()
+        ]);
     }
 
+    return back()->with('success', 'Academic and Hafazan records updated successfully.');
+}
+
+    
     // ==========================================
     // COMMUNICATION (Chat)
     // ==========================================
