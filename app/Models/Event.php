@@ -15,7 +15,8 @@ class Event extends Model
         'start_date',
         'end_date',
         'theme',       // e.g., 'Holiday' (Red), 'Activity' (Blue)
-        'created_by'   // Optional: Link to Admin ID
+        'created_by',
+        'google_event_id'
     ];
     
     // Cast dates so Carbon functions work (e.g., format('d M'))

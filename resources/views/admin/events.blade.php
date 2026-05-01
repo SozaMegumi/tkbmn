@@ -1,18 +1,6 @@
 @extends('layouts.app')
 
 @section('content')
-<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
-<style>
-    /* Slight adjustments to make FullCalendar match your Soft UI theme */
-    .fc .fc-toolbar-title { font-size: 1.25rem; font-weight: bold; color: #343a40; }
-    .fc .fc-button-primary { background-color: #f8f9fa; border-color: #e9ecef; color: #495057; text-transform: capitalize; }
-    .fc .fc-button-primary:not(:disabled).fc-button-active, .fc .fc-button-primary:not(:disabled):active, .fc .fc-button-primary:hover {
-        background-color: #e2e6ea; border-color: #dae0e5; color: #212529;
-    }
-    .fc-theme-standard td, .fc-theme-standard th { border-color: #f0f0f0; }
-    .fc-daygrid-event { border-radius: 4px; padding: 2px 4px; font-size: 0.85rem; }
-</style>
-
 <div class="container-fluid pb-5">
 
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -31,9 +19,21 @@
 
     <div class="row g-4">
         <div class="col-lg-8">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body p-4">
-                    <div id='calendar'></div>
+            <div class="card shadow-sm border-0 h-100 overflow-hidden">
+                <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-google text-primary me-2"></i> Official Live Calendar</h6>
+                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill">Synced</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="ratio ratio-16x9" style="min-height: 600px;">
+                        <iframe src="https://calendar.google.com/calendar/embed?src=d4d0cb8880723983e580a8443ce0efae85a048aef89020e4a02e5ecc0d7fa407%40group.calendar.google.com&ctz=Asia%2FKuala_Lumpur"
+                                style="border: 0" 
+                                width="100%" 
+                                height="600" 
+                                frameborder="0" 
+                                scrolling="no">
+                        </iframe>
+                    </div>
                 </div>
             </div>
         </div>
@@ -197,7 +197,7 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // 1. Initialize the Edit Modal Logic (Your existing script)
+        // Initialize the Edit Modal Data
         const editButtons = document.querySelectorAll('.edit-btn');
         const editForm = document.getElementById('editEventForm');
 
@@ -211,34 +211,6 @@
                 editForm.action = "/admin/events/update/" + this.dataset.id;
             });
         });
-
-        // 2. Initialize FullCalendar
-        var calendarEl = document.getElementById('calendar');
-        var calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            height: 550, // Restricts height so it matches the list nicely
-            headerToolbar: {
-                left: 'title',
-                right: 'prev,next today'
-            },
-            // This pulls the data directly from your Laravel controller loop into Javascript!
-            events: [
-                @foreach($events as $event)
-                {
-                    id: '{{ $event->event_id }}',
-                    title: '{{ addslashes($event->title) }}',
-                    start: '{{ $event->start_date->format("Y-m-d") }}',
-                    // If there is an end date, use it. FullCalendar requires the string format
-                    end: '{{ $event->end_date ? $event->end_date->addDay()->format("Y-m-d") : "" }}', 
-                    // Map your 'theme' variable to exact hex colors
-                    backgroundColor: '{{ $event->theme == "danger" ? "#dc3545" : "#0d6efd" }}',
-                    borderColor: '{{ $event->theme == "danger" ? "#dc3545" : "#0d6efd" }}',
-                    allDay: true
-                },
-                @endforeach
-            ]
-        });
-        calendar.render();
     });
 </script>
 @endsection
