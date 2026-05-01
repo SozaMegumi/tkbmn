@@ -49,9 +49,11 @@
                         <div class="list-group-item p-4 d-flex align-items-start border-bottom-0 border-top">
                             <div class="text-center me-3" style="min-width: 50px;">
                                 <h3 class="mb-0 fw-bold text-{{ $event->theme == 'danger' ? 'danger' : 'primary' }}">
-                                    {{ $event->start_date->format('d') }}
+                                    {{ \Carbon\Carbon::parse($event->start_date)->format('d') }}
                                 </h3>
-                                <small class="text-uppercase fw-bold text-muted" style="font-size: 0.7rem;">{{ $event->start_date->format('M') }}</small>
+                                <small class="text-uppercase fw-bold text-muted" style="font-size: 0.7rem;">
+                                    {{ \Carbon\Carbon::parse($event->start_date)->format('M') }}
+                                </small>
                             </div>
 
                             <div class="flex-grow-1">
@@ -67,7 +69,7 @@
                                     
                                     @if($event->end_date && $event->end_date != $event->start_date)
                                         <small class="text-muted" style="font-size: 0.75rem;">
-                                            <i class="bi bi-arrow-right-short"></i> {{ $event->end_date->format('d M') }}
+                                            <i class="bi bi-arrow-right-short"></i> {{ \Carbon\Carbon::parse($event->end_date)->format('d M') }}
                                         </small>
                                     @endif
                                 </div>
@@ -77,19 +79,21 @@
                                 <button class="btn btn-light btn-sm rounded-circle" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
                                 <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
                                     <li>
+                                        <!-- FIXED: Changed event_id to id -->
                                         <button class="dropdown-item edit-btn small" 
-                                            data-id="{{ $event->event_id }}"
+                                            data-id="{{ $event->id }}"
                                             data-title="{{ $event->title }}"
                                             data-desc="{{ $event->description }}"
-                                            data-start="{{ $event->start_date->format('Y-m-d') }}"
-                                            data-end="{{ $event->end_date ? $event->end_date->format('Y-m-d') : '' }}"
+                                            data-start="{{ \Carbon\Carbon::parse($event->start_date)->format('Y-m-d') }}"
+                                            data-end="{{ $event->end_date ? \Carbon\Carbon::parse($event->end_date)->format('Y-m-d') : '' }}"
                                             data-theme="{{ $event->theme }}"
                                             data-bs-toggle="modal" data-bs-target="#editEventModal">
                                             <i class="bi bi-pencil-square me-2 text-muted"></i> Edit
                                         </button>
                                     </li>
                                     <li>
-                                        <form action="{{ route('admin.events.delete', $event->event_id) }}" method="POST" onsubmit="return confirm('Delete this event?');">
+                                        <!-- FIXED: Changed event_id to id -->
+                                        <form action="{{ route('admin.events.delete', $event->id) }}" method="POST" onsubmit="return confirm('Delete this event?');">
                                             @csrf @method('DELETE')
                                             <button class="dropdown-item text-danger small"><i class="bi bi-trash me-2"></i> Delete</button>
                                         </form>
@@ -110,6 +114,7 @@
     </div>
 </div>
 
+<!-- Add Event Modal -->
 <div class="modal fade" id="addEventModal" tabindex="-1">
     <div class="modal-dialog">
         <form class="modal-content border-0 shadow" action="{{ route('admin.events.store') }}" method="POST">
@@ -152,6 +157,7 @@
     </div>
 </div>
 
+<!-- Edit Event Modal -->
 <div class="modal fade" id="editEventModal" tabindex="-1">
     <div class="modal-dialog">
         <form class="modal-content border-0 shadow" id="editEventForm" method="POST">
@@ -197,9 +203,11 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // Initialize the Edit Modal Data
         const editButtons = document.querySelectorAll('.edit-btn');
         const editForm = document.getElementById('editEventForm');
+
+        // FIXED: Generating a safe Base URL for Laragon
+        const baseUrl = "{{ url('/admin/events/update') }}";
 
         editButtons.forEach(btn => {
             btn.addEventListener('click', function() {
@@ -208,7 +216,9 @@
                 document.getElementById('edit_start').value = this.dataset.start;
                 document.getElementById('edit_end').value = this.dataset.end;
                 document.getElementById('edit_theme').value = this.dataset.theme;
-                editForm.action = "/admin/events/update/" + this.dataset.id;
+                
+                // FIXED: Safely append the event ID to the base URL
+                editForm.action = baseUrl + "/" + this.dataset.id;
             });
         });
     });

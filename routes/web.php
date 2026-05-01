@@ -74,14 +74,11 @@ Route::middleware('auth:admin')->prefix('admin')->name('admin.')->group(function
     // Process 9.0: Reports
     Route::get('/reports', [AdminController::class, 'reports'])->name('reports');
 
-   // --- 10.0 EVENTS ---
-    Route::get('/events', [AdminController::class, 'events'])->name('events');
-    Route::post('/events/store', [AdminController::class, 'storeEvent'])->name('events.store');
-    Route::put('/events/update/{id}', [AdminController::class, 'updateEvent'])->name('events.update');
-    Route::delete('/events/delete/{id}', [AdminController::class, 'deleteEvent'])->name('events.delete');
-});
-
-
+  // --- 10.0 ADMIN EVENTS ---
+Route::get('/admin/events', [AdminController::class, 'events'])->name('admin.events');
+Route::post('/admin/events/store', [AdminController::class, 'storeEvent'])->name('admin.events.store');
+Route::put('/admin/events/update/{id}', [AdminController::class, 'updateEvent'])->name('admin.events.update');
+Route::delete('/admin/events/delete/{id}', [AdminController::class, 'deleteEvent'])->name('admin.events.delete');
 // --- TEACHER ROUTES (Processes 5.0, 6.0, 7.0) ---
 Route::middleware('auth:teacher')->prefix('teacher')->name('teacher.')->group(function () {
     Route::get('/dashboard', [TeacherController::class, 'dashboard'])->name('dashboard');
@@ -117,4 +114,5 @@ Route::middleware('auth:parent')->prefix('parent')->name('parent.')->group(funct
     
     Route::get('/events', [ParentController::class, 'events'])->name('events');
     
-});
+
+   });});
