@@ -29,6 +29,7 @@
             color: white; 
             z-index: 1000;
             box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+            overflow-y: auto; /* Added just in case sidebar gets too long */
         }
         
         /* Sidebar Header */
@@ -50,9 +51,10 @@
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
+            text-decoration: none;
         }
         
-        .sidebar .nav-link i { 
+        .sidebar .nav-link i:not(.bi-chevron-down) { 
             font-size: 1.1rem; 
             margin-right: 12px; 
             width: 25px; 
@@ -91,6 +93,10 @@
             margin: 0 auto 15px;
             box-shadow: 0 0 20px rgba(0,0,0,0.2);
         }
+
+        /* Fix for scrollbar in sidebar */
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 5px; }
     </style>
 </head>
 <body>
@@ -99,8 +105,8 @@
         
         <div class="sidebar-header">
             <div class="brand-icon" style="background: transparent; overflow: hidden;">
-    <img src="{{ asset('kemaslogo.png') }}" alt="Logo" style="width: 100%; height: 100%; object-fit: cover;">
-                <i class="bi bi-backpack4-fill fs-2 text-warning"></i>
+                <img src="{{ asset('kemaslogo.png') }}" alt="Logo" style="width: 100%; height: 100%; object-fit: cover;">
+                <i class="bi bi-backpack4-fill fs-2 text-warning" style="display:none;"></i>
             </div>
             <h6 class="fw-bold text-white mb-0" style="letter-spacing: 0.5px;">
                 TABIKA KEMAS
@@ -131,8 +137,42 @@
                 <li class="nav-item"><a class="nav-link {{ request()->routeIs('admin.enrolment*') ? 'active' : '' }}" href="{{ route('admin.enrolment') }}"><i class="bi bi-person-vcard-fill"></i> Enrolment</a></li>
                 <li class="nav-item"><a class="nav-link {{ request()->routeIs('admin.exams*') ? 'active' : '' }}" href="{{ route('admin.exams') }}"><i class="bi bi-journal-bookmark-fill"></i> Exam Setup</a></li>
                 <li class="nav-item"><a class="nav-link {{ request()->routeIs('admin.finance*') ? 'active' : '' }}" href="{{ route('admin.finance') }}"><i class="bi bi-wallet-fill"></i> Finance</a></li>
-                <li class="nav-item"><a class="nav-link {{ request()->routeIs('admin.reports*') ? 'active' : '' }}" href="{{ route('admin.reports') }}"><i class="bi bi-file-earmark-text-fill"></i> Reports</a></li>
-                <li class="nav-item"><a class="nav-link {{ request()->routeIs('admin.events*') ? 'active' : '' }}" href="{{ route('admin.events') }}"><i class="bi bi-calendar-check-fill"></i> Events</a></li>
+                
+                <!-- NEW COLLAPSIBLE REPORTS MENU -->
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}" data-bs-toggle="collapse" href="#reportsMenu" role="button" aria-expanded="{{ request()->routeIs('admin.reports.*') ? 'true' : 'false' }}">
+                        <i class="bi bi-file-earmark-text-fill"></i> 
+                        <span class="flex-grow-1">Reports</span>
+                        <i class="bi bi-chevron-down ms-auto" style="font-size: 0.8rem; width: auto; margin-right: 0;"></i>
+                    </a>
+                    <div class="collapse {{ request()->routeIs('admin.reports.*') ? 'show' : '' }}" id="reportsMenu">
+                        <ul class="nav flex-column ms-3 mt-1" style="border-left: 1px solid rgba(255,255,255,0.1);">
+                            <li class="nav-item ps-2 mb-1">
+                                <a class="nav-link py-2 {{ request()->routeIs('admin.reports.takwim') ? 'text-white fw-bold' : '' }}" href="{{ route('admin.reports.takwim') }}" style="font-size: 0.85rem;">
+                                    <i class="bi bi-calendar3 fs-6"></i> Takwim
+                                </a>
+                            </li>
+                            <li class="nav-item ps-2 mb-1">
+                                <a class="nav-link py-2 {{ request()->routeIs('admin.reports.unjuran') ? 'text-white fw-bold' : '' }}" href="{{ route('admin.reports.unjuran') }}" style="font-size: 0.85rem;">
+                                    <i class="bi bi-calculator fs-6"></i> Unjuran
+                                </a>
+                            </li>
+                            <li class="nav-item ps-2 mb-1">
+                                <a class="nav-link py-2 {{ request()->routeIs('admin.reports.berkelompok') ? 'text-white fw-bold' : '' }}" href="{{ route('admin.reports.berkelompok') }}" style="font-size: 0.85rem;">
+                                    <i class="bi bi-collection fs-6"></i> Berkelompok
+                                </a>
+                            </li>
+                            <li class="nav-item ps-2 mb-1">
+                                <a class="nav-link py-2 {{ request()->routeIs('admin.reports.prestasi') ? 'text-white fw-bold' : '' }}" href="{{ route('admin.reports.prestasi') }}" style="font-size: 0.85rem;">
+                                    <i class="bi bi-graph-up fs-6"></i> Prestasi
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+                <!-- END REPORTS MENU -->
+
+                <li class="nav-item mt-1"><a class="nav-link {{ request()->routeIs('admin.events*') ? 'active' : '' }}" href="{{ route('admin.events') }}"><i class="bi bi-calendar-check-fill"></i> Events</a></li>
             @endif
 
             @if(Auth::guard('teacher')->check())

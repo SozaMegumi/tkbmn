@@ -4,34 +4,26 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
+// Notice there is NO "use SoftDeletes" up here anymore!
 
 class Assessment extends Model
 {
-    use HasFactory, SoftDeletes;
-
-    protected $primaryKey = 'assessment_id';
+    use HasFactory; // Notice it ONLY says HasFactory here now!
 
     protected $fillable = [
-        'class_id',
-        'academic_year_id',
-        'title',
-        'type',
-        'date',
-        'total_marks',
+        'title',       
+        'start_date',  
+        'end_date',    
+        'status',      
     ];
 
     protected $casts = [
-        'date' => 'date',
+        'start_date' => 'date',
+        'end_date' => 'date',
     ];
 
     public function results()
     {
         return $this->hasMany(AssessmentResult::class, 'assessment_id');
-    }
-
-    public function classroom()
-    {
-        return $this->belongsTo(Classroom::class, 'class_id');
     }
 }

@@ -17,6 +17,14 @@
         </div>
     @endif
 
+    <!-- ADD THIS WARNING BLOCK -->
+    @if(session('warning'))
+        <div class="alert alert-warning alert-dismissible fade show border-0 shadow-sm" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ session('warning') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
     <div class="row g-4">
         <div class="col-lg-8">
             <div class="card shadow-sm border-0 h-100 overflow-hidden">
@@ -79,9 +87,9 @@
                                 <button class="btn btn-light btn-sm rounded-circle" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
                                 <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
                                     <li>
-                                        <!-- FIXED: Changed event_id to id -->
+                                        <!-- Fixed: Using event_id to prevent null errors -->
                                         <button class="dropdown-item edit-btn small" 
-                                            data-id="{{ $event->id }}"
+                                            data-id="{{ $event->event_id }}"
                                             data-title="{{ $event->title }}"
                                             data-desc="{{ $event->description }}"
                                             data-start="{{ \Carbon\Carbon::parse($event->start_date)->format('Y-m-d') }}"
@@ -92,8 +100,8 @@
                                         </button>
                                     </li>
                                     <li>
-                                        <!-- FIXED: Changed event_id to id -->
-                                        <form action="{{ route('admin.events.delete', $event->id) }}" method="POST" onsubmit="return confirm('Delete this event?');">
+                                        <!-- Fixed: Using event_id here too -->
+                                        <form action="{{ route('admin.events.delete', $event->event_id) }}" method="POST" onsubmit="return confirm('Delete this event?');">
                                             @csrf @method('DELETE')
                                             <button class="dropdown-item text-danger small"><i class="bi bi-trash me-2"></i> Delete</button>
                                         </form>
@@ -206,7 +214,6 @@
         const editButtons = document.querySelectorAll('.edit-btn');
         const editForm = document.getElementById('editEventForm');
 
-        // FIXED: Generating a safe Base URL for Laragon
         const baseUrl = "{{ url('/admin/events/update') }}";
 
         editButtons.forEach(btn => {
@@ -217,7 +224,6 @@
                 document.getElementById('edit_end').value = this.dataset.end;
                 document.getElementById('edit_theme').value = this.dataset.theme;
                 
-                // FIXED: Safely append the event ID to the base URL
                 editForm.action = baseUrl + "/" + this.dataset.id;
             });
         });

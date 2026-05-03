@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Event extends Model
 {
-    // Match the Primary Key in your ERD
+    use HasFactory;
+
+    // Tell Laravel the primary key is 'event_id'
     protected $primaryKey = 'event_id';
 
     protected $fillable = [
@@ -14,14 +17,8 @@ class Event extends Model
         'description',
         'start_date',
         'end_date',
-        'theme',       // e.g., 'Holiday' (Red), 'Activity' (Blue)
+        'theme',
         'created_by',
         'google_event_id'
-    ];
-    
-    // Cast dates so Carbon functions work (e.g., format('d M'))
-    protected $casts = [
-        'start_date' => 'date',
-        'end_date' => 'date',
     ];
 }

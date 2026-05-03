@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth; 
 use Carbon\Carbon;
 
-//  The Spatie Google Calendar package
+// The Spatie Google Calendar package
 use Spatie\GoogleCalendar\Event as GoogleEvent; 
 
 class AdminController extends Controller
@@ -111,6 +111,299 @@ class AdminController extends Controller
     }
 
     // ==========================================
+    // 9.0 REPORT MANAGEMENT FUNCTIONS (PBMT)
+    // ==========================================
+
+    // --- 1. Takwim Sesi Persekolahan ---
+    public function reportTakwim() {
+        $history = \App\Models\PbmtReport::where('report_type', 'takwim')->orderBy('created_at', 'desc')->get();
+        return view('admin.reports.takwim', compact('history'));
+    }
+
+    public function generateTakwim(Request $request) {
+        $request->validate([
+            'year' => 'required|integer',
+            'months' => 'required|array',
+            'tabika_days' => 'required|array',
+            'taska_days' => 'required|array',
+        ]);
+
+        $total_tabika_days = array_sum($request->tabika_days);
+        $total_taska_days = array_sum($request->taska_days);
+
+        $data = [
+            'year' => $request->year,
+            'total_tabika_days' => $total_tabika_days,
+            'total_taska_days' => $total_taska_days,
+            'rows' => []
+        ];
+
+        foreach($request->months as $index => $month) {
+            $data['rows'][] = [
+                'month' => $month,
+                'tabika_days' => $request->tabika_days[$index],
+                'tabika_notes' => $request->tabika_notes[$index] ?? '',
+                'taska_days' => $request->taska_days[$index],
+                'taska_notes' => $request->taska_notes[$index] ?? '',
+            ];
+        }
+
+        \App\Models\PbmtReport::create([
+            'report_type' => 'takwim',
+            'year' => $request->year,
+            'data_snapshot' => json_encode($data),
+            'generated_by' => Auth::guard('admin')->user()->name ?? 'Admin',
+        ]);
+
+        return redirect()->back()->with('success', 'Dokumen Takwim berjaya dijana dan disimpan!');
+    }
+
+    public function printTakwim(int $id) {
+        $report = \App\Models\PbmtReport::findOrFail($id);
+        $data = json_decode($report->data_snapshot, true);
+        return view('admin.reports.print.takwim_format', compact('report', 'data'));
+    }
+
+    public function deleteTakwim(int $id) { 
+        $report = \App\Models\PbmtReport::findOrFail($id);
+        $report->delete();
+        return redirect()->back()->with('success', 'Rekod takwim berjaya dipadam.');
+    }
+
+
+    // --- 2. Unjuran Permohonan ---
+    public function reportUnjuran() {
+        $history = \App\Models\PbmtReport::where('report_type', 'unjuran')->orderBy('created_at', 'desc')->get();
+        return view('admin.reports.unjuran', compact('history'));
+    }
+
+    public function generateUnjuran(Request $request) {
+        $request->validate(['year' => 'required|integer']);
+
+        $baki_lepas = $request->baki_lepas ?? 0;
+        $jumlah_keseluruhan = 0;
+        $rows = [];
+
+        if($request->months) {
+            foreach($request->months as $index => $month) {
+                $kadar = $request->kadar[$index] ?? 3.00;
+                $hari = $request->hari[$index] ?? 0;
+                $kanak = $request->kanak[$index] ?? 0;
+                
+                $jumlah_bulan = $kadar * $hari * $kanak;
+                $jumlah_keseluruhan += $jumlah_bulan;
+
+                $rows[] = [
+                    'month' => $month,
+                    'kadar' => $kadar,
+                    'hari'  => $hari,
+                    'kanak' => $kanak,
+                    'jumlah_bulan' => $jumlah_bulan
+                ];
+            }
+        }
+
+        $jumlah_bersih = $jumlah_keseluruhan - $baki_lepas;
+
+        $data = [
+            'year' => $request->year,
+            'phase' => $request->phase ?? 'FASA 1',
+            'kod_smpk' => $request->kod_smpk,
+            'akaun_bank' => $request->akaun_bank,
+            'nama_bank' => $request->nama_bank,
+            'no_evendor' => $request->no_evendor,
+            'baki_lepas' => $baki_lepas,
+            'rows' => $rows,
+            'jumlah_keseluruhan' => $jumlah_keseluruhan,
+            'jumlah_bersih' => $jumlah_bersih,
+        ];
+
+        $report = \App\Models\PbmtReport::create([
+            'report_type' => 'unjuran',
+            'phase' => $request->phase ?? 'FASA 1',
+            'year' => $request->year,
+            'data_snapshot' => json_encode($data),
+            'generated_by' => Auth::guard('admin')->user()->name ?? 'Admin',
+        ]);
+
+        return redirect()->back()
+            ->with('success', 'Unjuran Kewangan PBMT berjaya dijana!')
+            ->with('auto_print', $report->id);
+    }
+
+    public function printUnjuran(int $id) {
+        $report = \App\Models\PbmtReport::findOrFail($id);
+        $data = json_decode($report->data_snapshot, true);
+        return view('admin.reports.print.unjuran_format', compact('report', 'data'));
+    }
+
+    public function deleteUnjuran(int $id) {
+        $report = \App\Models\PbmtReport::findOrFail($id);
+        $report->delete();
+        return redirect()->back()->with('success', 'Rekod Unjuran berjaya dipadam.');
+    }
+
+
+    // --- 3. Rumusan Berkelompok ---
+    public function reportRumusan() {
+        $history = \App\Models\PbmtReport::where('report_type', 'berkelompok')->orderBy('created_at', 'desc')->get();
+        return view('admin.reports.berkelompok', compact('history'));
+    }
+
+    public function generateRumusan(Request $request) {
+        $request->validate(['year' => 'required|integer']);
+
+        $rows = [];
+        $jumlah_keseluruhan = 0;
+
+        // Loop through the 5 rows submitted by the form
+        if($request->nama_tabika) {
+            foreach($request->nama_tabika as $index => $nama) {
+                if(!empty($nama)) { // Only process rows where a Name was actually typed
+                    $jumlah = (float)($request->jumlah[$index] ?? 0);
+                    $jumlah_keseluruhan += $jumlah;
+
+                    $rows[] = [
+                        'kod_vendor' => $request->kod_vendor[$index] ?? '',
+                        'nama_tabika' => strtoupper($nama),
+                        'nama_bank' => strtoupper($request->nama_bank[$index] ?? ''),
+                        'no_akaun' => $request->no_akaun[$index] ?? '',
+                        'jumlah' => $jumlah,
+                        'catatan' => $request->catatan[$index] ?? '',
+                    ];
+                }
+            }
+        }
+
+        $data = [
+            'year' => $request->year,
+            'phase' => $request->phase ?? 'FASA 1',
+            'parlimen' => strtoupper($request->parlimen ?? ''),
+            'negeri' => strtoupper($request->negeri ?? 'JOHOR'),
+            'rows' => $rows,
+            'jumlah_keseluruhan' => $jumlah_keseluruhan,
+        ];
+
+        $report = \App\Models\PbmtReport::create([
+            'report_type' => 'berkelompok',
+            'phase' => $request->phase ?? 'FASA 1',
+            'year' => $request->year,
+            'data_snapshot' => json_encode($data),
+            'generated_by' => Auth::guard('admin')->user()->name ?? 'Admin',
+        ]);
+
+        return redirect()->back()
+            ->with('success', 'Rumusan Berkelompok berjaya dijana!')
+            ->with('auto_print', $report->id);
+    }
+
+    public function printRumusan(int $id) {
+        $report = \App\Models\PbmtReport::findOrFail($id);
+        $data = json_decode($report->data_snapshot, true);
+        return view('admin.reports.print.berkelompok_format', compact('report', 'data'));
+    }
+
+    public function deleteRumusan(int $id) {
+        $report = \App\Models\PbmtReport::findOrFail($id);
+        $report->delete();
+        return redirect()->back()->with('success', 'Rekod Rumusan berjaya dipadam.');
+    }
+
+
+    // --- 4. Prestasi Perbelanjaan ---
+    public function reportPrestasi() {
+        $history = \App\Models\PbmtReport::where('report_type', 'prestasi')->orderBy('created_at', 'desc')->get();
+        return view('admin.reports.prestasi', compact('history'));
+    }
+
+    public function generatePrestasi(Request $request) {
+        $request->validate(['year' => 'required|integer']);
+
+        $jumlah_peruntukan_total = 0;
+        $jumlah_perbelanjaan_total = 0;
+        $jumlah_baki_total = 0;
+        $total_hari_peruntukan = 0;
+        $total_hari_perbelanjaan = 0;
+
+        $rows = [];
+
+        // Loop through all 9 rows (6 months + 3 extra KEMAS categories)
+        if($request->row_labels) {
+            foreach($request->row_labels as $index => $label) {
+                $kanak_p = (int)($request->kanak_p[$index] ?? 0);
+                $hari_p = (int)($request->hari_p[$index] ?? 0);
+                $peruntukan = (float)($request->peruntukan[$index] ?? 0);
+                
+                $kanak_b = (int)($request->kanak_b[$index] ?? 0);
+                $hari_b = (int)($request->hari_b[$index] ?? 0);
+                $perbelanjaan = (float)($request->perbelanjaan[$index] ?? 0);
+
+                $catatan = $request->catatan[$index] ?? '';
+                
+                $baki = $peruntukan - $perbelanjaan;
+
+                $jumlah_peruntukan_total += $peruntukan;
+                $jumlah_perbelanjaan_total += $perbelanjaan;
+                $jumlah_baki_total += $baki;
+                $total_hari_peruntukan += $hari_p;
+                $total_hari_perbelanjaan += $hari_b;
+
+                $rows[] = [
+                    'label' => $label,
+                    'kanak_p' => $kanak_p,
+                    'hari_p' => $hari_p,
+                    'peruntukan' => $peruntukan,
+                    'kanak_b' => $kanak_b,
+                    'hari_b' => $hari_b,
+                    'perbelanjaan' => $perbelanjaan,
+                    'baki' => $baki,
+                    'catatan' => $catatan
+                ];
+            }
+        }
+
+        $data = [
+            'year' => $request->year,
+            'phase' => $request->phase ?? 'FASA 1',
+            'kategori' => $request->kategori ?? 'TABIKA',
+            'nama_tabika' => $request->nama_tabika,
+            'daerah' => $request->daerah,
+            'negeri' => $request->negeri,
+            'rows' => $rows,
+            'jumlah_peruntukan_total' => $jumlah_peruntukan_total,
+            'jumlah_perbelanjaan_total' => $jumlah_perbelanjaan_total,
+            'jumlah_baki_total' => $jumlah_baki_total,
+            'total_hari_peruntukan' => $total_hari_peruntukan,
+            'total_hari_perbelanjaan' => $total_hari_perbelanjaan,
+        ];
+
+        $report = \App\Models\PbmtReport::create([
+            'report_type' => 'prestasi',
+            'phase' => $request->phase ?? 'FASA 1',
+            'year' => $request->year,
+            'data_snapshot' => json_encode($data),
+            'generated_by' => Auth::guard('admin')->user()->name ?? 'Admin',
+        ]);
+
+        return redirect()->back()
+            ->with('success', 'Laporan Prestasi Perbelanjaan berjaya dijana!')
+            ->with('auto_print', $report->id);
+    }
+
+    public function printPrestasi(int $id) {
+        $report = \App\Models\PbmtReport::findOrFail($id);
+        $data = json_decode($report->data_snapshot, true);
+        return view('admin.reports.print.prestasi_format', compact('report', 'data'));
+    }
+
+    public function deletePrestasi(int $id) {
+        $report = \App\Models\PbmtReport::findOrFail($id);
+        $report->delete();
+        return redirect()->back()->with('success', 'Rekod Prestasi berjaya dipadam.');
+    }
+
+
+    // ==========================================
     // 1.0 USER ACCOUNTS (Teachers & Parents)
     // ==========================================
     public function users() {
@@ -154,7 +447,7 @@ class AdminController extends Controller
         return back()->with('success', 'User Account Created Successfully!');
     }
 
-    public function updateUser(Request $request, $id) {
+    public function updateUser(Request $request, int $id) {
         if($request->type == 'teacher') {
             $teacher = Teacher::findOrFail($id);
             $teacher->update([
@@ -177,7 +470,7 @@ class AdminController extends Controller
         return back()->with('success', 'User details updated successfully!');
     }
 
-    public function deleteUser(Request $request, $id) {
+    public function deleteUser(Request $request, int $id) {
         if($request->input('type') == 'teacher') {
             Teacher::findOrFail($id)->delete();
         } else {
@@ -185,6 +478,7 @@ class AdminController extends Controller
         }
         return back()->with('success', 'User account deleted successfully.');
     }
+
 
     // ==========================================
     // 3.0 & 4.0 STUDENT ENROLMENT
@@ -222,6 +516,51 @@ class AdminController extends Controller
         return back()->with('success', 'Student Enrolled Successfully!');
     }
 
+
+    // ==========================================
+    // 5.0 ASSESSMENT SETUP (Pengurusan Pentaksiran)
+    // ==========================================
+    public function exams() {
+        // Fetch all assessment periods, newest first
+        $assessments = \App\Models\Assessment::orderBy('created_at', 'desc')->get();
+        return view('admin.exams', compact('assessments')); 
+    }
+
+    public function storeExam(Request $request) {
+        $request->validate([
+            'title'      => 'required|string|max:255',
+            'start_date' => 'required|date',
+            'end_date'   => 'required|date|after_or_equal:start_date',
+            'status'     => 'required|in:Buka,Tutup'
+        ]);
+
+        \App\Models\Assessment::create($request->all());
+
+        return back()->with('success', 'Sesi Pentaksiran berjaya dicipta! Guru kini boleh memasukkan markah.');
+    }
+
+    public function updateExam(Request $request, int $id) {
+        $request->validate([
+            'title'      => 'required|string|max:255',
+            'start_date' => 'required|date',
+            'end_date'   => 'required|date|after_or_equal:start_date',
+            'status'     => 'required|in:Buka,Tutup'
+        ]);
+
+        $assessment = \App\Models\Assessment::findOrFail($id);
+        $assessment->update($request->all());
+
+        return back()->with('success', 'Status Pentaksiran berjaya dikemaskini.');
+    }
+
+    public function deleteExam(int $id) {
+        $assessment = \App\Models\Assessment::findOrFail($id);
+        $assessment->delete();
+
+        return back()->with('success', 'Sesi Pentaksiran berjaya dipadam.');
+    }
+
+
     // ==========================================
     // 8.0 FINANCE (Process 8.0 in DFD)
     // ==========================================
@@ -239,11 +578,10 @@ class AdminController extends Controller
         ]);
     }
 
-    public function approvePayment($id) {
+    public function approvePayment(int $id) {
         $payment = Payment::findOrFail($id);
         $payment->update(['status' => 'Paid']);
 
-        // Link parent receipt verification directly to school income
         Transaction::create([
             'type' => 'income',
             'amount' => $payment->amount,
@@ -255,7 +593,7 @@ class AdminController extends Controller
         return back()->with('success', 'Payment approved and recorded in finance.');
     }
 
-    public function rejectPayment(Request $request, $id) {
+    public function rejectPayment(Request $request, int $id) {
         $payment = Payment::findOrFail($id);
         $payment->update([
             'status' => 'Unpaid',
@@ -277,11 +615,12 @@ class AdminController extends Controller
         return back()->with('success', 'Transaction Recorded Successfully!');
     }
 
-    public function deleteTransaction($id) {
+    public function deleteTransaction(int $id) {
         $transaction = Transaction::findOrFail($id);
         $transaction->delete();
         return back()->with('success', 'Transaction record deleted successfully.');
     }
+
 
     // ==========================================
     // 10.0 SCHOOL EVENTS (Fully Synced with Google)
@@ -291,16 +630,14 @@ class AdminController extends Controller
     }
 
     public function storeEvent(Request $request) {
-        // 1. Validate Form Data
         $request->validate([
             'title' => 'required|string|max:255',
             'start_date' => 'required|date',
             'theme' => 'required|in:primary,danger'
         ]);
 
-        $googleEventId = null; // Prepare an empty container for the Google ID
+        $googleEventId = null;
 
-        // 2. Send it to Google Calendar FIRST
         try {
             $googleEvent = new GoogleEvent;
             $googleEvent->name = $request->title;
@@ -313,17 +650,11 @@ class AdminController extends Controller
                 $googleEvent->endDateTime = Carbon::parse($request->start_date)->endOfDay();
             }
             
-            // Send to Google API
             $googleEvent->save();
-            
-            // MAGIC: Capture the Google ID immediately!
             $googleEventId = $googleEvent->id; 
             
-        } catch (\Exception $e) {
-            // If Google fails, it will safely skip to step 3 without crashing the app
-        }
+        } catch (\Exception $e) {}
 
-        // 3. Save it to your local database WITH the Google ID included instantly
         Event::create([
             'title'           => $request->title,
             'description'     => $request->description,
@@ -331,10 +662,9 @@ class AdminController extends Controller
             'end_date'        => $request->end_date ? Carbon::parse($request->end_date)->toDateString() : Carbon::parse($request->start_date)->toDateString(),
             'theme'           => $request->theme,
             'created_by'      => Auth::id() ?? 1,
-            'google_event_id' => $googleEventId // Saves the ID perfectly on the first try!
+            'google_event_id' => $googleEventId 
         ]);
 
-        // 4. Give the correct success message based on whether Google worked
         if ($googleEventId) {
             return back()->with('success', 'Event Posted Locally & Synced with Google Calendar!');
         } else {
@@ -342,18 +672,15 @@ class AdminController extends Controller
         }
     }
 
-    public function updateEvent(Request $request, $id) {
-        // 1. Validate Form Data
+    public function updateEvent(Request $request, int $id) {
         $request->validate([
             'title' => 'required|string|max:255',
             'start_date' => 'required|date',
             'theme' => 'required|in:primary,danger'
         ]);
 
-        // 2. Find local event
         $event = Event::findOrFail($id);
         
-        // 3. Update Locally
         $event->update([
             'title'       => $request->title,
             'description' => $request->description,
@@ -362,45 +689,61 @@ class AdminController extends Controller
             'theme'       => $request->theme,
         ]);
 
-        // 4. Update on Google Calendar
+        $googleUpdated = false;
+        $googleError = '';
+
         if ($event->google_event_id) {
             try {
                 $googleEvent = GoogleEvent::find($event->google_event_id);
                 if ($googleEvent) {
-                    $googleEvent->name = $request->title;
-                    $googleEvent->description = $request->description ?? '';
-                    $googleEvent->startDateTime = Carbon::parse($request->start_date)->startOfDay();
-                    $googleEvent->endDateTime = $request->end_date ? Carbon::parse($request->end_date)->endOfDay() : Carbon::parse($request->start_date)->endOfDay();
-                    
-                    // Saves the changes to Google!
-                    $googleEvent->save(); 
+                    $googleEvent->update([
+                        'name' => $request->title,
+                        'description' => $request->description ?? '',
+                        'startDateTime' => Carbon::parse($request->start_date)->startOfDay(),
+                        'endDateTime' => $request->end_date ? Carbon::parse($request->end_date)->endOfDay() : Carbon::parse($request->start_date)->endOfDay(),
+                    ]);
+                    $googleUpdated = true;
                 }
             } catch (\Exception $e) {
-                return back()->with('success', 'Updated locally, but Google Calendar update failed: ' . $e->getMessage());
+                $googleError = $e->getMessage();
             }
         }
 
-        return back()->with('success', 'Event Updated Locally and on Google Calendar!');
+        if ($googleUpdated) {
+            return back()->with('success', 'Event Updated Locally and on Google Calendar!');
+        } elseif ($event->google_event_id && $googleError) {
+            return back()->with('warning', 'Updated locally, but Google Calendar update failed. Error: ' . $googleError);
+        } else {
+            return back()->with('success', 'Event updated locally (It was never synced to Google Calendar originally).');
+        }
     }
 
-    public function deleteEvent($id) {
+    public function deleteEvent(int $id) {
         $event = Event::findOrFail($id);
+        
+        $googleDeleted = false;
+        $googleError = '';
 
-        // 1. Delete from Google Calendar first
         if ($event->google_event_id) {
             try {
                 $googleEvent = GoogleEvent::find($event->google_event_id);
                 if ($googleEvent) {
                     $googleEvent->delete();
+                    $googleDeleted = true;
                 }
             } catch (\Exception $e) {
-                // If it fails to delete from Google (e.g. no internet), we just catch it so we can still delete it locally.
+                $googleError = $e->getMessage();
             }
         }
 
-        // 2. Delete Locally
         $event->delete();
         
-        return back()->with('success', 'Event Deleted from System and Google Calendar.');
+        if ($googleDeleted) {
+            return back()->with('success', 'Event Deleted from System and Google Calendar.');
+        } elseif ($event->google_event_id && $googleError) {
+            return back()->with('warning', 'Deleted locally, but Google Calendar failed. Error: ' . $googleError);
+        } else {
+            return back()->with('success', 'Event Deleted locally (It was never synced to Google Calendar).');
+        }
     }
 }

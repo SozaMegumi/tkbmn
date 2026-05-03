@@ -55,30 +55,65 @@ Route::middleware('auth:admin')->prefix('admin')->name('admin.')->group(function
     Route::put('/enrolment/update/{id}', [AdminController::class, 'updateStudent'])->name('enrolment.update');
     Route::delete('/enrolment/delete/{id}', [AdminController::class, 'deleteStudent'])->name('enrolment.delete');
 
-    // Process 5.0: Assessment Setup
+    // 5.0 ASSESSMENT SETUP (Pengurusan Pentaksiran)
     Route::get('/exams', [AdminController::class, 'exams'])->name('exams');
     Route::post('/exams/store', [AdminController::class, 'storeExam'])->name('exams.store');
-
+    Route::put('/exams/{id}/update', [AdminController::class, 'updateExam'])->name('exams.update');
+    Route::delete('/exams/{id}/delete', [AdminController::class, 'deleteExam'])->name('exams.delete');
     // --- 8.0 FINANCE (Process 8.0: Payment Management) ---
     Route::get('/finance', [AdminController::class, 'finance'])->name('finance');
     Route::post('/finance/store', [AdminController::class, 'storeTransaction'])->name('finance.store');
     Route::delete('/finance/delete/{id}', [AdminController::class, 'deleteTransaction'])->name('finance.delete');
     
-    // ADDED: Logic for Parent Receipt Approvals (DFD Store 12 & 13)
+    // Parent Receipt Approvals (DFD Store 12 & 13)
     Route::post('/finance/approve/{id}', [AdminController::class, 'approvePayment'])->name('finance.approve');
     Route::post('/finance/reject/{id}', [AdminController::class, 'rejectPayment'])->name('finance.reject');
     
-    // ADDED: AJAX Cash Flow Data for dynamic monitoring (Process 9.0)
+    // AJAX Cash Flow Data for dynamic monitoring (Process 9.0)
     Route::get('/finance/chart-data', [AdminController::class, 'getCashFlowData'])->name('finance.chart-data');
 
     // Process 9.0: Reports
     Route::get('/reports', [AdminController::class, 'reports'])->name('reports');
 
-  // --- 10.0 ADMIN EVENTS ---
-Route::get('/admin/events', [AdminController::class, 'events'])->name('admin.events');
-Route::post('/admin/events/store', [AdminController::class, 'storeEvent'])->name('admin.events.store');
-Route::put('/admin/events/update/{id}', [AdminController::class, 'updateEvent'])->name('admin.events.update');
-Route::delete('/admin/events/delete/{id}', [AdminController::class, 'deleteEvent'])->name('admin.events.delete');
+    // --- 10.0 ADMIN EVENTS ---
+    // (Removed the redundant /admin and admin. prefixes here)
+    Route::get('/events', [AdminController::class, 'events'])->name('events');
+    Route::post('/events/store', [AdminController::class, 'storeEvent'])->name('events.store');
+    Route::put('/events/update/{id}', [AdminController::class, 'updateEvent'])->name('events.update');
+    Route::delete('/events/delete/{id}', [AdminController::class, 'deleteEvent'])->name('events.delete');
+
+
+    // 9.0 REPORT MANAGEMENT (PBMT Subsections)
+    Route::prefix('reports')->name('reports.')->group(function () {
+        
+        // 1. Takwim Sesi Persekolahan
+        Route::get('/takwim', [AdminController::class, 'reportTakwim'])->name('takwim');
+        Route::post('/takwim/generate', [AdminController::class, 'generateTakwim'])->name('takwim.generate');
+        Route::get('/takwim/print/{id}', [AdminController::class, 'printTakwim'])->name('takwim.print');
+        Route::delete('/takwim/delete/{id}', [AdminController::class, 'deleteTakwim'])->name('takwim.delete');
+
+        // 2. Unjuran Permohonan
+        Route::get('/unjuran', [AdminController::class, 'reportUnjuran'])->name('unjuran');
+        Route::post('/unjuran/generate', [AdminController::class, 'generateUnjuran'])->name('unjuran.generate');
+        Route::get('/unjuran/print/{id}', [AdminController::class, 'printUnjuran'])->name('unjuran.print');
+        Route::delete('/unjuran/delete/{id}', [AdminController::class, 'deleteUnjuran'])->name('unjuran.delete');
+
+        // 3. Rumusan Berkelompok
+        Route::get('/berkelompok', [AdminController::class, 'reportRumusan'])->name('berkelompok');
+        Route::post('/berkelompok/generate', [AdminController::class, 'generateRumusan'])->name('berkelompok.generate');
+        Route::get('/berkelompok/print/{id}', [AdminController::class, 'printRumusan'])->name('berkelompok.print');
+        Route::delete('/berkelompok/delete/{id}', [AdminController::class, 'deleteRumusan'])->name('berkelompok.delete');
+
+        // 4. Prestasi Perbelanjaan
+        Route::get('/prestasi', [AdminController::class, 'reportPrestasi'])->name('prestasi');
+        Route::post('/prestasi/generate', [AdminController::class, 'generatePrestasi'])->name('prestasi.generate');
+        Route::get('/prestasi/print/{id}', [AdminController::class, 'printPrestasi'])->name('prestasi.print');
+        Route::delete('/prestasi/delete/{id}', [AdminController::class, 'deletePrestasi'])->name('prestasi.delete');
+        
+    });
+});
+
+
 // --- TEACHER ROUTES (Processes 5.0, 6.0, 7.0) ---
 Route::middleware('auth:teacher')->prefix('teacher')->name('teacher.')->group(function () {
     Route::get('/dashboard', [TeacherController::class, 'dashboard'])->name('dashboard');
@@ -99,7 +134,6 @@ Route::middleware('auth:teacher')->prefix('teacher')->name('teacher.')->group(fu
 
 // --- PARENT PORTAL ROUTING ---
 Route::middleware('auth:parent')->prefix('parent')->name('parent.')->group(function () {
-    
     Route::get('/dashboard', [ParentController::class, 'dashboard'])->name('dashboard');
     
     // Full Screen Chat
@@ -111,8 +145,5 @@ Route::middleware('auth:parent')->prefix('parent')->name('parent.')->group(funct
     Route::post('/payment/upload', [ParentController::class, 'uploadReceipt'])->name('payment.upload');
 
     Route::get('/notices', [ParentController::class, 'notices'])->name('notices');
-    
     Route::get('/events', [ParentController::class, 'events'])->name('events');
-    
-
-   });});
+});
