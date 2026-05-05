@@ -60,8 +60,13 @@ Route::middleware('auth:admin')->prefix('admin')->name('admin.')->group(function
     Route::post('/exams/store', [AdminController::class, 'storeExam'])->name('exams.store');
     Route::put('/exams/{id}/update', [AdminController::class, 'updateExam'])->name('exams.update');
     Route::delete('/exams/{id}/delete', [AdminController::class, 'deleteExam'])->name('exams.delete');
+    
     // --- 8.0 FINANCE (Process 8.0: Payment Management) ---
     Route::get('/finance', [AdminController::class, 'finance'])->name('finance');
+    
+    // NEW: Generate Monthly Bills Route
+    Route::post('/finance/generate-bills', [AdminController::class, 'generateMonthlyBills'])->name('finance.generate-bills');
+    
     Route::post('/finance/store', [AdminController::class, 'storeTransaction'])->name('finance.store');
     Route::delete('/finance/delete/{id}', [AdminController::class, 'deleteTransaction'])->name('finance.delete');
     

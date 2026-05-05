@@ -14,7 +14,8 @@ class Transaction extends Model
         'description', 
         'amount', 
         'date', 
-        'payment_method'
+        'payment_method',
+        'receipt_path'
     ];
 
     protected $casts = [

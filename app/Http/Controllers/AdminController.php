@@ -80,7 +80,7 @@ class AdminController extends Controller
     }
 
     /**
-     * AJAX METHOD: Fetch Real Cash Flow Data (Process 9.0)
+     * AJAX METHOD: Fetch Real Cash Flow Data & Expense Breakdown
      */
     public function getCashFlowData(Request $request) {
         $monthsCount = $request->get('timeframe') === 'thisyear' ? 12 : 6;
@@ -88,6 +88,7 @@ class AdminController extends Controller
         $incomeData = [];
         $expenseData = [];
 
+        // 1. Fetch Bar Chart Data (Cash Flow)
         for ($i = $monthsCount - 1; $i >= 0; $i--) {
             $date = now()->subMonths($i);
             $labels[] = $date->format('M');
@@ -103,10 +104,21 @@ class AdminController extends Controller
                 ->sum('amount');
         }
 
+        // 2. Fetch Doughnut Chart Data (Expense Breakdown for Current Month)
+        $expenseBreakdown = Transaction::where('type', 'expense')
+            ->whereMonth('date', now()->month)
+            ->whereYear('date', now()->year)
+            ->selectRaw('category, sum(amount) as total')
+            ->groupBy('category')
+            ->get();
+
         return response()->json([
             'labels' => $labels,
             'income' => $incomeData,
-            'expense' => $expenseData
+            'expense' => $expenseData,
+            // These two specific lines pass the breakdown to your frontend JS
+            'expenseBreakdownLabels' => $expenseBreakdown->pluck('category'),
+            'expenseBreakdownData' => $expenseBreakdown->pluck('total')
         ]);
     }
 
@@ -565,17 +577,101 @@ class AdminController extends Controller
     // 8.0 FINANCE (Process 8.0 in DFD)
     // ==========================================
     public function finance() {
+        // 1. Calculate standard totals (Note: using lowercase 'income' to match your store function)
         $totalIncome = Transaction::where('type', 'income')->sum('amount');
         $totalExpense = Transaction::where('type', 'expense')->sum('amount');
+        $currentBalance = $totalIncome - $totalExpense;
+        
+        // 2. Fetch pending payments for Admin verification
         $pendingPayments = Payment::where('status', 'Pending')->with('student')->get();
+        
+        // 3. Fetch transaction history
+        $transactions = Transaction::orderBy('date', 'desc')->get();
 
-        return view('admin.finance', [
-            'totalIncome'    => $totalIncome,
-            'totalExpense'   => $totalExpense,
-            'currentBalance' => $totalIncome - $totalExpense,
-            'transactions'   => Transaction::orderBy('date', 'desc')->get(),
-            'pendingPayments' => $pendingPayments
+        // 4. NEW: Fetch Students grouped by Class to track Outstanding Balances
+        $classrooms = Classroom::with(['students' => function($query) {
+            $query->with(['payments' => function($q) {
+                // Only pull payments that are Unpaid or currently Pending verification
+                $q->whereIn('status', ['Unpaid', 'Pending']);
+            }]);
+        }])->get();
+
+        return view('admin.finance', compact(
+            'totalIncome', 
+            'totalExpense', 
+            'currentBalance', 
+            'transactions', 
+            'pendingPayments', 
+            'classrooms' // This makes the accordion table work!
+        ));
+    }
+    
+    public function generateMonthlyBills() {
+        // Fetch all active students
+        $students = Student::where('status', 'active')->get(); 
+        $currentMonth = now()->format('F Y'); // e.g., "May 2026"
+        $count = 0;
+
+        foreach($students as $student) {
+            // Check if we already generated a bill for this specific month to prevent duplicates
+            $alreadyBilled = Payment::where('student_id', $student->student_id) // adjust 'student_id' if your DB uses 'id'
+                                    ->where('admin_remarks', "Yuran Bulanan - $currentMonth")
+                                    ->exists();
+
+            if(!$alreadyBilled) {
+                Payment::create([
+                    'student_id' => $student->student_id, // adjust if primary key is 'id'
+                    'title' => 'Yuran Bulanan',
+                    'amount' => 150.00,
+                    'status' => 'Unpaid',
+                    'admin_remarks' => "Yuran Bulanan - $currentMonth"
+                ]);
+                $count++;
+            }
+        }
+
+        if($count > 0) {
+            return back()->with('success', "Berjaya! Invois RM 150.00 telah dijana untuk $count orang pelajar bagi bulan $currentMonth.");
+        } else {
+            return back()->with('warning', "Semua pelajar telah menerima invois untuk bulan $currentMonth.");
+        }
+    }
+    
+    // --- THIS IS THE CRITICAL FUNCTION THAT WAS UPDATED ---
+    public function storeTransaction(Request $request) {
+        // 1. Validate the form inputs, including the file
+        $request->validate([
+            'type' => 'required|in:income,expense',
+            'amount' => 'required|numeric|min:0',
+            'date' => 'required|date',
+            'category' => 'required',
+            // Allow files, make it optional (nullable), restrict to 2MB images/pdfs
+            'receipt_file' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048' 
         ]);
+
+        // 2. Grab all the text data from the form
+        $data = $request->except('receipt_file');
+
+        // 3. Handle the File Upload
+        if ($request->hasFile('receipt_file')) {
+            // Securely store the file in storage/app/public/receipts/transactions
+            // and get the file path back
+            $path = $request->file('receipt_file')->store('receipts/transactions', 'public');
+            
+            // Add the file path to our database save array
+            $data['receipt_path'] = $path;
+        }
+
+        // 4. Save to Database
+        Transaction::create($data);
+        
+        return back()->with('success', 'Transaction Recorded Successfully!');
+    }
+
+    public function deleteTransaction(int $id) {
+        $transaction = Transaction::findOrFail($id);
+        $transaction->delete();
+        return back()->with('success', 'Transaction record deleted successfully.');
     }
 
     public function approvePayment(int $id) {
@@ -601,24 +697,6 @@ class AdminController extends Controller
         ]);
 
         return back()->with('error', 'Payment rejected. Parent has been notified.');
-    }
-
-    public function storeTransaction(Request $request) {
-        $request->validate([
-            'type' => 'required|in:income,expense',
-            'amount' => 'required|numeric|min:0',
-            'date' => 'required|date',
-            'category' => 'required'
-        ]);
-
-        Transaction::create($request->all());
-        return back()->with('success', 'Transaction Recorded Successfully!');
-    }
-
-    public function deleteTransaction(int $id) {
-        $transaction = Transaction::findOrFail($id);
-        $transaction->delete();
-        return back()->with('success', 'Transaction record deleted successfully.');
     }
 
 

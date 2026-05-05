@@ -45,6 +45,21 @@
         </div>
     </div>
 
+    <!-- FLASH MESSAGES (Success / System Errors) -->
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show shadow-sm border-0 mb-4">
+            <i class="bi bi-check-circle-fill me-2"></i> {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm border-0 mb-4">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
     @php
         $totalOutstanding = $pendingInvoices->sum('amount');
         $lastPayment = $paymentHistory->first();
@@ -166,6 +181,18 @@
             </div>
             <div class="modal-body p-4 bg-light">
                 
+                <!-- VALIDATION ERROR CATCHER -->
+                @if ($errors->any())
+                    <div class="alert alert-danger shadow-sm border-0 small">
+                        <strong>Please fix the following issues:</strong>
+                        <ul class="mb-0 mt-1">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
                 <div class="alert alert-info border-0 shadow-sm mb-4">
                     <small>
                         <strong>Bank Details:</strong><br>
@@ -173,6 +200,20 @@
                         Acc Name: Tabika Kemas Bustanul Makwan Najwa<br>
                         Acc No: 1623 4567 8910
                     </small>
+                </div>
+
+                <!-- CHILD SELECTION DROPDOWN -->
+                <div class="mb-3">
+                    <label class="small fw-bold text-muted mb-2">Payment For (Student)</label>
+                    <select name="student_id" class="form-select border-0 shadow-sm py-2" required>
+                        <option value="">-- Select Child --</option>
+                        @php
+                            $student = \App\Models\Student::where('parent_id', auth()->user()->parent_id)->first();
+                        @endphp
+                        @if($student)
+                            <option value="{{ $student->student_id }}">{{ $student->student_name }}</option>
+                        @endif
+                    </select>
                 </div>
 
                 <div class="mb-3">
@@ -185,12 +226,12 @@
                     <input type="text" name="reference" class="form-control border-0 shadow-sm py-2" placeholder="e.g. Yuran Ahmad Mei & Buku" required>
                 </div>
 
-                <label class="small fw-bold text-muted mb-2">Upload Bank Receipt (JPG/PNG)</label>
+                <label class="small fw-bold text-muted mb-2">Upload Bank Receipt (JPG/PNG/PDF)</label>
                 <div class="file-upload-box" onclick="document.getElementById('receiptInput').click()">
                     <i class="bi bi-cloud-arrow-up text-primary" style="font-size: 2.5rem;"></i>
                     <h6 class="fw-bold mt-2 text-dark">Click to browse files</h6>
                     <small class="text-muted">Max file size: 2MB</small>
-                    <input type="file" name="receipt" id="receiptInput" class="d-none" accept=".jpg,.jpeg,.png" onchange="updateFileName(this)" required>
+                    <input type="file" name="receipt" id="receiptInput" class="d-none" accept=".jpg,.jpeg,.png,.pdf" onchange="updateFileName(this)" required>
                 </div>
                 <div id="fileNameDisplay" class="text-center mt-2 small fw-bold text-success"></div>
 
@@ -211,5 +252,13 @@
             document.querySelector('.file-upload-box').style.backgroundColor = '#f0fdf4';
         }
     }
+
+    // AUTO-OPEN MODAL IF THERE ARE ERRORS
+    document.addEventListener("DOMContentLoaded", function() {
+        @if($errors->any())
+            var myModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+            myModal.show();
+        @endif
+    });
 </script>
 @endsection

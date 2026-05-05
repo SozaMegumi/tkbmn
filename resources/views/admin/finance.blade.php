@@ -62,12 +62,34 @@
         </div>
     </div>
 
+    <!-- FLASH MESSAGES -->
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show shadow-sm border-0 mb-4">
+            <i class="bi bi-check-circle-fill me-2"></i> {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
+    @if(session('warning'))
+        <div class="alert alert-warning alert-dismissible fade show shadow-sm border-0 mb-4">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ session('warning') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
+    <!-- TOP CARDS SUMMARY -->
     <div class="row g-4 mb-4">
         <div class="col-lg-6">
             <div class="card card-soft bg-gradient-primary h-100 p-4">
                 <div class="d-flex flex-column h-100 justify-content-center position-relative">
                     <span class="stat-label mb-2"><i class="bi bi-wallet2 me-2"></i> Current School Budget</span>
-                    <h1 class="display-amount mb-0">RM {{ number_format($currentBalance ?? 0.00, 2) }}</h1>
+                    
+                    @if(isset($currentBalance) && $currentBalance < 0)
+                        <h1 class="display-amount mb-0">-RM {{ number_format(abs($currentBalance), 2) }}</h1>
+                    @else
+                        <h1 class="display-amount mb-0">RM {{ number_format($currentBalance ?? 0.00, 2) }}</h1>
+                    @endif
+                    
                     <p class="mt-2 mb-0 opacity-75 small"><i class="bi bi-check-circle me-1"></i> Funds available for use.</p>
                     <i class="bi bi-cash-stack position-absolute text-white" style="font-size: 10rem; opacity: 0.1; right: -20px; bottom: -30px;"></i>
                 </div>
@@ -99,6 +121,47 @@
         </div>
     </div>
 
+    <!-- 1. GRAPHS (Cash Flow & Expense) -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-7">
+            <div class="card card-soft h-100 bg-white">
+                <div class="card-header bg-white p-4 border-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark">Cash Flow Overview</h5>
+                        <small class="text-muted">Income vs Expense tracking</small>
+                    </div>
+                    <select id="timeframeFilter" class="form-select form-select-sm w-auto border-0 bg-light text-muted fw-bold" onchange="updateChartData()">
+                        <option value="6months">Last 6 Months</option>
+                        <option value="thisyear">This Year</option>
+                    </select>
+                </div>
+                <div class="card-body p-4 pt-0">
+                    <canvas id="cashFlowChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card card-soft h-100 bg-white">
+                <div class="card-header bg-white p-4 border-0 pb-2">
+                    <h5 class="fw-bold mb-0 text-dark">Expense Breakdown</h5>
+                    <small class="text-muted">Current Month Spending</small>
+                </div>
+                <div class="card-body p-4 pt-0">
+                    <div class="position-relative d-flex justify-content-center align-items-center mb-4" style="height: 220px;">
+                        <canvas id="expenseChart"></canvas>
+                        <div class="position-absolute text-center" style="pointer-events: none;">
+                            <span class="d-block text-muted small fw-bold mb-1" style="font-size: 0.7rem; text-transform: uppercase;">Spent So Far</span>
+                            <h4 class="fw-bold text-dark mb-0" id="expenseChartTotal">RM 0.00</h4>
+                        </div>
+                    </div>
+                    <div id="customExpenseLegend" class="d-flex flex-wrap justify-content-center gap-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. PENDING PARENT PAYMENTS -->
     <div class="card card-soft bg-white mb-4 border-warning">
         <div class="card-header bg-warning bg-opacity-10 p-4 border-0">
             <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-clock-history me-2"></i> Pending Parent Payments</h5>
@@ -117,7 +180,7 @@
                 <tbody>
                     @forelse($pendingPayments ?? [] as $p)
                     <tr>
-                        <td class="ps-4 font-weight-bold">{{ $p->student->student_name }}</td>
+                        <td class="ps-4 font-weight-bold">{{ $p->student->student_name ?? 'Unknown' }}</td>
                         <td>RM {{ number_format($p->amount, 2) }}</td>
                         <td>
                             <a href="{{ asset('storage/' . $p->receipt_path) }}" target="_blank" class="btn btn-sm btn-outline-primary">
@@ -142,39 +205,88 @@
         </div>
     </div>
 
-    <div class="row g-4 mb-4">
-        <div class="col-lg-8">
-            <div class="card card-soft h-100 bg-white">
-                <div class="card-header bg-white p-4 border-0 d-flex justify-content-between align-items-center">
-                    <div>
-                        <h5 class="fw-bold mb-0 text-dark">Cash Flow Overview</h5>
-                        <small class="text-muted">Income vs Expense tracking</small>
-                    </div>
-                    <select id="timeframeFilter" class="form-select form-select-sm w-auto border-0 bg-light text-muted fw-bold" onchange="updateChartData()">
-                        <option value="6months">Last 6 Months</option>
-                        <option value="thisyear">This Year</option>
-                    </select>
-                </div>
-                <div class="card-body p-4 pt-0">
-                    <canvas id="cashFlowChart" height="100"></canvas>
-                </div>
-            </div>
+    <!-- 3. STUDENT FEE TRACKER -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold text-dark mb-0"><i class="bi bi-people-fill text-primary me-2"></i> Student Fee Tracker</h5>
+            <form action="{{ route('admin.finance.generate-bills') }}" method="POST">
+                @csrf
+                <button type="submit" class="btn btn-sm btn-outline-primary fw-bold rounded-pill" onclick="return confirm('Are you sure you want to generate RM150.00 bills for all active students for this month?');">
+                    <i class="bi bi-receipt me-1"></i> Generate Monthly Bills
+                </button>
+            </form>
         </div>
+        <div class="card-body p-4">
+            <div class="accordion accordion-flush" id="classAccordion">
+                @foreach($classrooms ?? [] as $index => $class)
+                <div class="accordion-item border rounded mb-3 shadow-sm">
+                    <h2 class="accordion-header" id="heading{{ $class->class_id }}">
+                        <button class="accordion-button {{ $index == 0 ? '' : 'collapsed' }} fw-bold bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ $class->class_id }}">
+                            
+                            <!-- FIXED: Now checks for 'class_name', 'name', or defaults to the ID if both are missing -->
+                            <i class="bi bi-journal-bookmark-fill text-primary me-2"></i>
+                            <span class="text-dark me-3 fs-6">
+                                {{ $class->class_name ?? $class->name ?? 'Class ' . $class->class_id }}
+                            </span>
+                            
+                            <!-- Improved Badge Styling -->
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary rounded-pill">
+                                {{ $class->students->count() }} Students
+                            </span>
 
-        <div class="col-lg-4">
-            <div class="card card-soft h-100 bg-white">
-                <div class="card-header bg-white p-4 border-0">
-                    <h5 class="fw-bold mb-0 text-dark">Expense Breakdown</h5>
-                    <small class="text-muted">Current Month Spending</small>
+                        </button>
+                    </h2>
+                    <div id="collapse{{ $class->class_id }}" class="accordion-collapse collapse {{ $index == 0 ? 'show' : '' }}" data-bs-parent="#classAccordion">
+                        <div class="accordion-body p-0">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-4">Student Name</th>
+                                        <th>Parent/Guardian</th>
+                                        <th>Outstanding Balance</th>
+                                        <th class="text-end pe-4">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($class->students as $student)
+                                        @php
+                                            $outstanding = $student->payments->sum('amount');
+                                        @endphp
+                                        <tr>
+                                            <td class="ps-4 fw-bold text-dark">{{ $student->student_name }}</td>
+                                            <td class="text-muted small">{{ $student->parent->parent_name ?? 'N/A' }}</td>
+                                            <td>
+                                                @if($outstanding > 0)
+                                                    <span class="text-danger fw-bold">RM {{ number_format($outstanding, 2) }}</span>
+                                                @else
+                                                    <span class="text-success fw-bold">RM 0.00</span>
+                                                @endif
+                                            </td>
+                                            <td class="text-end pe-4">
+                                                @if($outstanding > 0)
+                                                    <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-2">Outstanding</span>
+                                                @else
+                                                    <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2"><i class="bi bi-check-circle-fill me-1"></i> Cleared</span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="4" class="text-center py-4 text-muted">No students enrolled in this class yet.</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body p-4 pt-0 d-flex justify-content-center align-items-center">
-                    <canvas id="expenseChart" height="250"></canvas>
-                </div>
+                @endforeach
             </div>
         </div>
     </div>
 
-    <div class="card card-soft bg-white">
+    <!-- 4. TRANSACTION HISTORY (WITH VIEW RECEIPT BUTTON) -->
+    <div class="card card-soft bg-white mb-4">
         <div class="card-header bg-white p-4 border-0 d-flex justify-content-between align-items-center">
             <h5 class="fw-bold mb-0 text-dark">Transaction History</h5>
             <span class="badge bg-light text-secondary border">{{ count($transactions ?? []) }} Records</span>
@@ -193,7 +305,7 @@
                 <tbody>
                     @forelse($transactions ?? [] as $t)
                     <tr>
-                        <td class="ps-4 text-muted font-monospace">{{ $t->date->format('d M Y') }}</td>
+                        <td class="ps-4 text-muted font-monospace">{{ $t->date ? \Carbon\Carbon::parse($t->date)->format('d M Y') : '-' }}</td>
                         <td>
                             <div class="d-flex align-items-center">
                                 <div class="icon-box {{ $t->type == 'income' ? 'bg-success bg-opacity-10 text-success' : 'bg-danger bg-opacity-10 text-danger' }}" 
@@ -207,18 +319,32 @@
                             </div>
                         </td>
                         <td>
-                            <small class="text-muted"><i class="bi bi-credit-card me-1"></i> {{ $t->payment_method }}</small>
+                            <small class="text-muted"><i class="bi bi-credit-card me-1"></i> {{ $t->payment_method ?? 'Transfer' }}</small>
                         </td>
                         <td class="text-end fw-bold {{ $t->type == 'income' ? 'text-success' : 'text-danger' }}">
                             {{ $t->type == 'income' ? '+' : '-' }} RM {{ number_format($t->amount, 2) }}
                         </td>
                         <td class="text-end pe-4">
-                            <form action="{{ route('admin.finance.delete', $t->transaction_id ?? $t->id) }}" method="POST" onsubmit="return confirm('Delete this record?');">
-                                @csrf @method('DELETE')
-                                <button class="btn btn-sm btn-link text-muted hover-danger p-0" title="Delete">
-                                    <i class="bi bi-trash-fill"></i>
-                                </button>
-                            </form>
+                            <div class="d-flex justify-content-end align-items-center gap-2">
+                                
+                                <!-- ADJUSTED: Always show a button so layout is clean. Disabled if no receipt. -->
+                                @if(!empty($t->receipt_path))
+                                    <a href="{{ asset('storage/' . $t->receipt_path) }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View Uploaded Receipt">
+                                        <i class="bi bi-file-earmark-text"></i> View
+                                    </a>
+                                @else
+                                    <button class="btn btn-sm btn-outline-secondary disabled" title="No Receipt Attached" style="opacity: 0.5; cursor: not-allowed;">
+                                        <i class="bi bi-file-earmark-x"></i> None
+                                    </button>
+                                @endif
+                                
+                                <form action="{{ route('admin.finance.delete', $t->transaction_id ?? $t->id) }}" method="POST" onsubmit="return confirm('Delete this record?');">
+                                    @csrf @method('DELETE')
+                                    <button class="btn btn-sm btn-link text-muted hover-danger p-0" title="Delete">
+                                        <i class="bi bi-trash-fill fs-5"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     @empty
@@ -236,9 +362,12 @@
 
 </div>
 
+<!-- MODALS WITH ENCTYPE ADDED FOR FILE UPLOAD -->
+
 <div class="modal fade" id="incomeModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <form class="modal-content border-0 shadow" action="{{ route('admin.finance.store') }}" method="POST">
+        <!-- ADDED enctype="multipart/form-data" -->
+        <form class="modal-content border-0 shadow" action="{{ route('admin.finance.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
             <input type="hidden" name="type" value="income">
             <div class="modal-header bg-success text-white border-0">
@@ -257,7 +386,7 @@
                 </div>
                 <div class="mb-3">
                     <label class="small fw-bold text-muted">Description (Who Paid?)</label>
-                    <input type="text" name="description" class="form-control border-0 shadow-sm py-2" placeholder="e.g. Ali Bin Abu (Jan Fee)">
+                    <input type="text" name="description" class="form-control border-0 shadow-sm py-2" placeholder="e.g. Ali Bin Abu (Jan Fee)" required>
                 </div>
                 <div class="row">
                     <div class="col-6 mb-3">
@@ -269,7 +398,7 @@
                         <input type="date" name="date" class="form-control border-0 shadow-sm py-2" value="{{ date('Y-m-d') }}" required>
                     </div>
                 </div>
-                <div class="mb-2">
+                <div class="mb-3">
                     <label class="small fw-bold text-muted">Payment Method</label>
                     <select name="payment_method" class="form-select border-0 shadow-sm py-2">
                         <option value="Cash">Cash Handover</option>
@@ -277,6 +406,14 @@
                         <option value="Cheque">Cheque</option>
                     </select>
                 </div>
+
+                <!-- NEW OPTIONAL FILE UPLOAD FIELD -->
+                <div class="mb-2">
+                    <label class="small fw-bold text-muted">Upload Receipt / Document (Optional)</label>
+                    <input type="file" name="receipt_file" class="form-control border-0 shadow-sm" accept=".jpg,.jpeg,.png,.pdf">
+                    <small class="text-muted mt-1" style="font-size: 0.75rem;">Supported formats: JPG, PNG, PDF (Max 2MB)</small>
+                </div>
+
             </div>
             <div class="modal-footer border-0 bg-light">
                 <button type="submit" class="btn btn-success w-100 fw-bold rounded-pill py-2 shadow">Save Income Record</button>
@@ -287,7 +424,8 @@
 
 <div class="modal fade" id="expenseModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <form class="modal-content border-0 shadow" action="{{ route('admin.finance.store') }}" method="POST">
+        <!-- ADDED enctype="multipart/form-data" -->
+        <form class="modal-content border-0 shadow" action="{{ route('admin.finance.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
             <input type="hidden" name="type" value="expense">
             <div class="modal-header bg-danger text-white border-0">
@@ -297,7 +435,7 @@
             <div class="modal-body p-4 bg-light">
                 <div class="mb-3">
                     <label class="small fw-bold text-muted">Category</label>
-                    <select name="category" class="form-select border-0 shadow-sm py-2">
+                    <select id="expenseCategory" name="category" class="form-select border-0 shadow-sm py-2">
                         <option value="Food & Kitchen">Kitchen Supplies (Rice, etc.)</option>
                         <option value="Stationary">Classroom Stationary</option>
                         <option value="Maintenance">Repairs & Maintenance</option>
@@ -308,25 +446,33 @@
                 </div>
                 <div class="mb-3">
                     <label class="small fw-bold text-muted">Description (Details)</label>
-                    <input type="text" name="description" class="form-control border-0 shadow-sm py-2" placeholder="e.g. Bought 10kg Rice">
+                    <input type="text" id="expenseDesc" name="description" class="form-control border-0 shadow-sm py-2" placeholder="e.g. Bought 10kg Rice" required>
                 </div>
                 <div class="row">
                     <div class="col-6 mb-3">
                         <label class="small fw-bold text-muted">Amount (RM)</label>
-                        <input type="number" step="0.01" name="amount" class="form-control border-0 shadow-sm py-2 text-danger fw-bold" placeholder="0.00" required>
+                        <input type="number" id="expenseAmount" step="0.01" name="amount" class="form-control border-0 shadow-sm py-2 text-danger fw-bold" placeholder="0.00" required>
                     </div>
                     <div class="col-6 mb-3">
                         <label class="small fw-bold text-muted">Date</label>
                         <input type="date" name="date" class="form-control border-0 shadow-sm py-2" value="{{ date('Y-m-d') }}" required>
                     </div>
                 </div>
-                <div class="mb-2">
+                <div class="mb-3">
                     <label class="small fw-bold text-muted">Payment Method</label>
                     <select name="payment_method" class="form-select border-0 shadow-sm py-2">
                         <option value="Cash">Cash</option>
                         <option value="Online Transfer">Online Transfer</option>
                     </select>
                 </div>
+
+                <!-- NEW OPTIONAL FILE UPLOAD FIELD -->
+                <div class="mb-2">
+                    <label class="small fw-bold text-muted">Upload Receipt / Proof (Optional)</label>
+                    <input type="file" name="receipt_file" class="form-control border-0 shadow-sm" accept=".jpg,.jpeg,.png,.pdf">
+                    <small class="text-muted mt-1" style="font-size: 0.75rem;">Supported formats: JPG, PNG, PDF (Max 2MB)</small>
+                </div>
+
             </div>
             <div class="modal-footer border-0 bg-light">
                 <button type="submit" class="btn btn-danger w-100 fw-bold rounded-pill py-2 shadow">Save Expense Record</button>
@@ -358,51 +504,127 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-
+// --- EXISTING CHART JS ---
 let cashFlowChartInstance = null;
+let expenseChartInstance = null; 
 
 async function updateChartData() {
     const timeframe = document.getElementById('timeframeFilter').value;
     
-    // Fetch real data from the controller via AJAX
-    const response = await fetch(`{{ route('admin.finance.chart-data') }}?timeframe=${timeframe}`);
-    const data = await response.json();
+    try {
+        const response = await fetch(`{{ route('admin.finance.chart-data') }}?timeframe=${timeframe}`);
+        const data = await response.json();
 
-    if (cashFlowChartInstance) {
-        cashFlowChartInstance.destroy(); // Clean old chart before re-drawing
-    }
+        // 1. DRAW CASH FLOW BAR CHART
+        if (cashFlowChartInstance) cashFlowChartInstance.destroy();
 
-    const ctx = document.getElementById('cashFlowChart').getContext('2d');
-    cashFlowChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: data.labels,
-            datasets: [
-                {
-                    label: 'Income (RM)',
-                    data: data.income,
-                    backgroundColor: 'rgba(25, 135, 84, 0.8)',
-                    borderRadius: 4
-                },
-                {
-                    label: 'Expenses (RM)',
-                    data: data.expense,
-                    backgroundColor: 'rgba(220, 53, 69, 0.8)',
-                    borderRadius: 4
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: { beginAtZero: true, grid: { borderDash: [2, 4] } }
+        const ctxCashFlow = document.getElementById('cashFlowChart').getContext('2d');
+        cashFlowChartInstance = new Chart(ctxCashFlow, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [
+                    {
+                        label: 'Income (RM)',
+                        data: data.income,
+                        backgroundColor: 'rgba(25, 135, 84, 0.8)',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Expenses (RM)',
+                        data: data.expense,
+                        backgroundColor: 'rgba(220, 53, 69, 0.8)',
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, grid: { borderDash: [2, 4] } } }
             }
+        });
+
+        // 2. DRAW EXPENSE BREAKDOWN DOUGHNUT CHART
+        if (expenseChartInstance) expenseChartInstance.destroy();
+
+        const ctxExpense = document.getElementById('expenseChart').getContext('2d');
+        
+        const breakdownData = data.expenseBreakdownData ? Object.values(data.expenseBreakdownData) : [];
+        const breakdownLabels = data.expenseBreakdownLabels ? Object.values(data.expenseBreakdownLabels) : [];
+        
+        const hasData = breakdownData.length > 0 && breakdownData.some(val => val > 0);
+        
+        const totalSpent = breakdownData.reduce((a, b) => a + parseFloat(b), 0);
+        document.getElementById('expenseChartTotal').innerText = 'RM ' + totalSpent.toLocaleString('en-MY', {minimumFractionDigits: 2});
+
+        const chartColors = ['#ff4b2b', '#ffc107', '#667eea', '#11998e', '#0dcaf0', '#d63384'];
+
+        expenseChartInstance = new Chart(ctxExpense, {
+            type: 'doughnut',
+            data: {
+                labels: hasData ? breakdownLabels : ['No Expenses Yet'],
+                datasets: [{
+                    data: hasData ? breakdownData : [1], 
+                    backgroundColor: hasData ? chartColors.slice(0, breakdownData.length) : ['#e9ecef'],
+                    borderWidth: 0,
+                    cutout: '80%' 
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                if(!hasData) return 'RM 0.00';
+                                return ' RM ' + parseFloat(context.raw).toLocaleString('en-MY', {minimumFractionDigits: 2});
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // 3. RENDER CUSTOM HTML LEGEND
+        const legendContainer = document.getElementById('customExpenseLegend');
+        legendContainer.innerHTML = ''; 
+
+        if (hasData) {
+            breakdownLabels.forEach((label, index) => {
+                const amount = parseFloat(breakdownData[index]).toLocaleString('en-MY', {minimumFractionDigits: 2});
+                const colorHex = chartColors[index % chartColors.length];
+                
+                let iconClass = 'bi-receipt'; 
+                if (label.includes('Food') || label.includes('Kitchen')) iconClass = 'bi-cup-straw';
+                else if (label.includes('Stationary')) iconClass = 'bi-pencil-square';
+                else if (label.includes('Maintenance')) iconClass = 'bi-tools';
+                else if (label.includes('Utility')) iconClass = 'bi-lightning-charge-fill';
+                else if (label.includes('Salary')) iconClass = 'bi-person-badge-fill';
+                else if (label.includes('Event')) iconClass = 'bi-calendar-star-fill';
+
+                legendContainer.innerHTML += `
+                    <div class="d-flex flex-column align-items-center text-center mx-1 mt-2">
+                        <div class="rounded-circle d-flex justify-content-center align-items-center mb-2" 
+                             style="width: 45px; height: 45px; background-color: ${colorHex}20; color: ${colorHex};">
+                            <i class="bi ${iconClass} fs-5"></i>
+                        </div>
+                        <span class="fw-bold text-dark" style="font-size: 0.75rem;">${label}</span>
+                        <span class="text-danger fw-bold" style="font-size: 0.7rem;">-RM ${amount}</span>
+                    </div>
+                `;
+            });
+        } else {
+            legendContainer.innerHTML = `<span class="text-muted small">No category data to display.</span>`;
         }
-    });
+
+    } catch(e) {
+        console.error("Chart rendering error:", e);
+    }
 }
 
-// Load default data on page startup
 document.addEventListener('DOMContentLoaded', updateChartData);
 </script>
 @endsection
