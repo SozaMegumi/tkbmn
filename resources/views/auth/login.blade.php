@@ -61,7 +61,6 @@
         ========================================= */
         .page-front {
             z-index: 2;
-            /* Update url('...') with your local image if needed */
             background-image: linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.85)), 
                               url('https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=1000&auto=format&fit=crop');
         }
@@ -82,7 +81,6 @@
         ========================================= */
         .page-back {
             transform: rotateY(180deg);
-            /* Update url('...') with your local image if needed */
             background-image: linear-gradient(rgba(26, 37, 47, 0.92), rgba(26, 37, 47, 0.95)), 
                               url('https://images.unsplash.com/photo-1558494949-ef526b0042a0?q=80&w=1000&auto=format&fit=crop');
             color: white;
@@ -180,6 +178,7 @@
 <div class="scene">
     <div class="book" id="loginBook">
         
+        <!-- FRONT PAGE: Parent & Teacher Login -->
         <div class="page page-front">
             <div class="header-front">
                 <i class="bi bi-backpack4-fill fs-1 mb-2"></i>
@@ -190,19 +189,35 @@
             <div class="form-area">
                 @if($errors->any())
                     <div class="alert alert-danger py-2 text-center small mb-3 border-0 shadow-sm">
-                        <i class="bi bi-exclamation-circle me-1"></i> Invalid Credentials
+                        <i class="bi bi-exclamation-circle me-1"></i> {{ $errors->first() }}
+                    </div>
+                @endif
+                
+                @if(session('success'))
+                    <div class="alert alert-success py-2 text-center small mb-3 border-0 shadow-sm">
+                        <i class="bi bi-check-circle me-1"></i> {{ session('success') }}
                     </div>
                 @endif
 
-                <form action="{{ route('login.submit') }}" method="POST">
+                <!-- Use route('login.post') assuming that's what you named the route in web.php -->
+                <form action="{{ route('login.post') }}" method="POST">
                     @csrf
+                    
+                    <!-- CHANGED FROM EMAIL TO ID/USERNAME -->
                     <div class="mb-3">
-                        <label class="small fw-bold text-secondary ms-1">EMAIL</label>
-                        <input type="email" name="email" class="form-control" placeholder="user@kemas.com" required>
+                        <label class="small fw-bold text-secondary ms-1">ID / USERNAME</label>
+                        <!-- type="text" instead of "email" -->
+                        <input type="text" name="login_id" class="form-control" placeholder="Enter your ID" required>
                     </div>
                     
                     <div class="mb-4">
-                        <label class="small fw-bold text-secondary ms-1">PASSWORD</label>
+                        <div class="d-flex justify-content-between align-items-center mb-1 ms-1">
+                            <label class="small fw-bold text-secondary mb-0">PASSWORD</label>
+                            
+                            <!-- ADDED FORGOT PASSWORD LINK -->
+                            <!-- Change the route name if you named it differently in web.php -->
+                            <a href="{{ route('password.forgot') }}" class="small text-decoration-none" style="color: #2194cdff; font-weight: 600;">Forgot?</a>
+                        </div>
                         <input type="password" name="password" class="form-control" placeholder="••••••••" required>
                     </div>
 
@@ -221,6 +236,7 @@
             </div>
         </div>
 
+        <!-- BACK PAGE: Admin Login -->
         <div class="page page-back">
             <div class="header-back">
                 <i class="bi bi-shield-lock-fill fs-1 mb-2 text-info"></i>
@@ -229,13 +245,16 @@
             </div>
 
             <div class="form-area">
-                <form action="{{ route('login.submit') }}" method="POST">
+                <!-- Assuming Admin also uses the same controller method -->
+                <form action="{{ route('login.post') }}" method="POST">
                     @csrf
+                    
+                    <!-- Note: Left Admin as Email, change to login_id if Admins also use IDs -->
                     <div class="mb-3">
-                        <label class="small fw-bold text-white-50 ms-1">ADMIN EMAIL</label>
+                        <label class="small fw-bold text-white-50 ms-1">ADMIN EMAIL / ID</label>
                         <div class="input-group">
                             <span class="input-group-text border-end-0"><i class="bi bi-person-fill"></i></span>
-                            <input type="email" name="email" class="form-control border-start-0" placeholder="admin@kemas.com" required>
+                            <input type="text" name="login_id" class="form-control border-start-0" placeholder="Admin ID or Email" required>
                         </div>
                     </div>
                     

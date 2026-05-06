@@ -6,30 +6,23 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\ParentController;
+use App\Http\Controllers\AuthController; // <-- NEW IMPORT
 
-// --- LOGIN (Process 2.0) ---
+// --- LOGIN & AUTHENTICATION (Process 2.0) ---
 Route::get('/', function () { 
     return view('auth.login'); 
 })->name('login');
 
-Route::post('/login', function (Request $request) {
-    $creds = $request->validate(['email' => 'required', 'password' => 'required']);
+// Using AuthController for ID-Based Login
+Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 
-    if (Auth::guard('admin')->attempt($creds)) {
-        $request->session()->regenerate();
-        return redirect()->route('admin.dashboard');
-    }
-    if (Auth::guard('teacher')->attempt($creds)) {
-        $request->session()->regenerate();
-        return redirect()->route('teacher.dashboard');
-    }
-    if (Auth::guard('parent')->attempt($creds)) {
-        $request->session()->regenerate();
-        return redirect()->route('parent.dashboard');
-    }
-    return back()->withErrors(['email' => 'Invalid credentials.']);
-})->name('login.submit');
+// --- FORGOT PASSWORD & OTP ROUTES ---
+Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])->name('password.forgot');
+Route::post('/forgot-password', [AuthController::class, 'sendResetCode'])->name('password.sendCode');
+Route::get('/verify-code', [AuthController::class, 'showVerifyCode'])->name('password.verify.page');
+Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.reset');
 
+// --- LOGOUT ---
 Route::post('/logout', function (Request $request) {
     Auth::guard('admin')->logout();
     Auth::guard('teacher')->logout();
@@ -81,12 +74,10 @@ Route::middleware('auth:admin')->prefix('admin')->name('admin.')->group(function
     Route::get('/reports', [AdminController::class, 'reports'])->name('reports');
 
     // --- 10.0 ADMIN EVENTS ---
-    // (Removed the redundant /admin and admin. prefixes here)
     Route::get('/events', [AdminController::class, 'events'])->name('events');
     Route::post('/events/store', [AdminController::class, 'storeEvent'])->name('events.store');
     Route::put('/events/update/{id}', [AdminController::class, 'updateEvent'])->name('events.update');
     Route::delete('/events/delete/{id}', [AdminController::class, 'deleteEvent'])->name('events.delete');
-
 
     // 9.0 REPORT MANAGEMENT (PBMT Subsections)
     Route::prefix('reports')->name('reports.')->group(function () {
