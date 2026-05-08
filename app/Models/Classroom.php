@@ -14,11 +14,7 @@ class Classroom extends Model
         'class_name', 
         'capacity'
     ];
-    
-    // IMPORTANT: We do NOT use "SoftDeletes" here because 
-    // your database table does not have a 'deleted_at' column.
 
-    // 3. Relationships (Optional but good to have)
     public function teacher() {
         return $this->hasOne(Teacher::class, 'assigned_class_id', 'class_id');
     }

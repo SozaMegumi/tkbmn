@@ -17,12 +17,12 @@ class Student extends Model
         'parent_id', 'class_id'
     ];
 
-    // Link to Parent (For Table Display)
+   // A Student belongs to one Guardian
     public function parent() {
         return $this->belongsTo(Guardian::class, 'parent_id', 'parent_id');
     }
 
-    // Link to Class (For Table Display)
+    // While we are here, link the student to their class!
     public function classroom() {
         return $this->belongsTo(Classroom::class, 'class_id', 'class_id');
     }

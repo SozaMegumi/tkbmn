@@ -29,4 +29,8 @@ class Guardian extends Authenticatable
     protected $hidden = [
         'password', 'remember_token',
     ];
+    // A Guardian has many Students
+    public function students() {
+        return $this->hasMany(Student::class, 'parent_id', 'parent_id');
+    }
 }

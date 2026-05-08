@@ -16,18 +16,16 @@
         transition: all 0.3s ease; cursor: pointer; position: relative;
     }
     .date-card-wrapper:hover, .date-card-wrapper:focus-within {
-        border-color: #cd2122; /* KEMAS Red */
+        border-color: #cd2122; 
         background-color: #fff5f5;
         box-shadow: 0 4px 15px rgba(205, 33, 34, 0.1);
         transform: translateY(-2px);
     }
     
-    /* The Invisible Functional Input */
     .ghost-date-input {
         position: absolute; top: 0; left: 0; 
         width: 100%; height: 100%;
-        opacity: 0; /* Invisible */
-        cursor: pointer; z-index: 10;
+        opacity: 0; cursor: pointer; z-index: 10;
     }
 
     .calendar-icon { font-size: 2.5rem; color: #cd2122; margin-bottom: 10px; display: block; }
@@ -38,10 +36,8 @@
         display: inline-flex; gap: 0; background: #f1f5f9;
         padding: 4px; border-radius: 50px; 
     }
-    /* Hide default radio */
     .status-radio { display: none; }
     
-    /* Custom Labels */
     .btn-status-custom {
         border-radius: 50px; padding: 6px 16px; font-size: 0.85rem;
         border: 1px solid transparent; color: #64748b; 
@@ -49,17 +45,23 @@
     }
     .btn-status-custom:hover { background: #e2e8f0; }
 
-    /* Active States */
     .status-radio:checked + .btn-present { background-color: #10b981; color: white; box-shadow: 0 2px 5px rgba(16, 185, 129, 0.3); }
     .status-radio:checked + .btn-absent  { background-color: #ef4444; color: white; box-shadow: 0 2px 5px rgba(239, 68, 68, 0.3); }
     .status-radio:checked + .btn-late    { background-color: #f59e0b; color: white; box-shadow: 0 2px 5px rgba(245, 158, 11, 0.3); }
 
-    /* Avatar */
     .avatar-placeholder {
         width: 42px; height: 42px; background: #e2e8f0; color: #64748b;
         border-radius: 50%; display: flex; align-items: center; justify-content: center;
         font-weight: 700; font-size: 0.95rem;
     }
+    
+    /* Upload Button Styles */
+    .btn-upload-circle {
+        width: 35px; height: 35px;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; transition: all 0.2s;
+    }
+    .btn-upload-circle:hover { background-color: #f1f5f9; }
 </style>
 
 <div class="container-fluid pb-5">
@@ -69,9 +71,17 @@
             <h3 class="fw-bold text-dark mb-1">Attendance Management</h3>
             <p class="text-muted small mb-0">Record daily attendance for your students.</p>
         </div>
-        <span class="badge bg-white text-dark shadow-sm px-3 py-2 rounded-pill border">
-            {{ date('l, d M Y') }}
-        </span>
+        <div class="d-flex align-items-center gap-2">
+            @if(isset($selectedClass) && isset($selectedDate))
+                <a href="{{ route('teacher.attendance.print', ['date' => $selectedDate, 'class_id' => $selectedClass->class_id]) }}" target="_blank" class="btn btn-outline-danger shadow-sm px-3 py-2 rounded-pill fw-bold bg-white">
+                    <i class="bi bi-file-pdf-fill"></i> Cetak PDF
+                </a>
+            @endif
+            
+            <span class="badge bg-white text-dark shadow-sm px-3 py-2 rounded-pill border">
+                {{ date('l, d M Y') }}
+            </span>
+        </div>
     </div>
 
     @if(session('success'))
@@ -88,10 +98,8 @@
                     
                     <div class="col-md-3">
                         <label class="small fw-bold text-muted mb-2">1. Select Date</label>
-                        
                         <div class="date-card-wrapper" onclick="openDatePicker()">
                             <i class="bi bi-calendar-check calendar-icon"></i>
-                            
                             <div class="selected-date-display" id="dateDisplay">
                                 {{ \Carbon\Carbon::parse(request('attendance_date', date('Y-m-d')))->format('d M Y') }}
                             </div>
@@ -128,7 +136,7 @@
     </div>
 
     @if(isset($selectedClass) && isset($selectedDate))
-    <form action="{{ route('teacher.attendance.store') }}" method="POST">
+    <form action="{{ route('teacher.attendance.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
         <input type="hidden" name="class_id" value="{{ $selectedClass->class_id }}">
         <input type="hidden" name="attendance_date" value="{{ $selectedDate }}">
@@ -156,15 +164,15 @@
                         <tr>
                             <th class="ps-4 py-3">Student Name</th>
                             <th class="text-center py-3">Status</th>
-                            <th class="pe-4 py-3" style="width: 25%;">Reason (If Absent)</th>
+                            <th class="pe-4 py-3" style="width: 35%;">Reason & MC/Surat (If Absent)</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($students as $student)
                         @php 
-                            // Safety check for relationship
-                            $status = $student->attendance->status ?? 'present'; 
+                            $status = $student->attendance->status ?? 'Tak Hadir'; 
                             $reason = $student->attendance->reason ?? ''; 
+                            $attachment = $student->attendance->attachment ?? null;
                         @endphp
                         <tr>
                             <td class="ps-4">
@@ -173,7 +181,7 @@
                                         {{ substr($student->student_name, 0, 2) }}
                                     </div>
                                     <div>
-                                        <div class="fw-bold text-dark">{{ $student->student_name }}</div>
+                                        <div class="fw-bold text-dark text-uppercase">{{ $student->student_name }}</div>
                                         <small class="text-muted">{{ $student->mykid }}</small>
                                     </div>
                                 </div>
@@ -182,33 +190,47 @@
                                 <div class="status-group">
                                     <input type="radio" class="status-radio" 
                                            name="attendances[{{ $student->student_id }}][status]" 
-                                           id="p_{{ $student->student_id }}" value="present" 
-                                           {{ $status == 'present' ? 'checked' : '' }}>
+                                           id="p_{{ $student->student_id }}" value="Hadir" 
+                                           {{ $status == 'Hadir' ? 'checked' : '' }}>
                                     <label class="btn-status-custom btn-present" for="p_{{ $student->student_id }}">
-                                        Present
+                                        Hadir
                                     </label>
 
                                     <input type="radio" class="status-radio" 
                                            name="attendances[{{ $student->student_id }}][status]" 
-                                           id="a_{{ $student->student_id }}" value="absent" 
-                                           {{ $status == 'absent' ? 'checked' : '' }}>
+                                           id="a_{{ $student->student_id }}" value="Tak Hadir" 
+                                           {{ $status == 'Tak Hadir' ? 'checked' : '' }}>
                                     <label class="btn-status-custom btn-absent" for="a_{{ $student->student_id }}">
-                                        Absent
+                                        Tak Hadir
                                     </label>
 
                                     <input type="radio" class="status-radio" 
                                            name="attendances[{{ $student->student_id }}][status]" 
-                                           id="l_{{ $student->student_id }}" value="late" 
-                                           {{ $status == 'late' ? 'checked' : '' }}>
+                                           id="l_{{ $student->student_id }}" value="Cuti" 
+                                           {{ $status == 'Cuti' ? 'checked' : '' }}>
                                     <label class="btn-status-custom btn-late" for="l_{{ $student->student_id }}">
-                                        Late
+                                        Cuti
                                     </label>
                                 </div>
                             </td>
                             <td class="pe-4">
-                                <input type="text" name="attendances[{{ $student->student_id }}][reason]" 
-                                       class="form-control bg-light border-0 rounded-pill px-3" 
-                                       placeholder="Optional..." value="{{ $reason }}">
+                                <div class="d-flex align-items-center gap-2">
+                                    <input type="text" name="attendances[{{ $student->student_id }}][reason]" 
+                                           class="form-control bg-light border-0 rounded-pill px-3 w-100" 
+                                           placeholder="Cth: Demam, Balik Kampung..." value="{{ $reason }}">
+                                    
+                                    <label class="btn btn-light rounded-circle shadow-sm border mb-0 btn-upload-circle" title="Muat Naik MC / Surat">
+                                        <i class="bi bi-paperclip text-secondary fs-5" id="icon_{{ $student->student_id }}"></i>
+                                        <input type="file" name="attendances[{{ $student->student_id }}][attachment]" class="d-none" accept=".pdf,.jpg,.jpeg,.png" 
+                                               onchange="document.getElementById('icon_{{ $student->student_id }}').className = 'bi bi-file-earmark-check-fill text-success fs-5';">
+                                    </label>
+
+                                    @if($attachment)
+                                        <a href="{{ asset('storage/' . $attachment) }}" target="_blank" class="btn btn-info rounded-circle shadow-sm mb-0 btn-upload-circle text-white" title="Lihat MC">
+                                            <i class="bi bi-file-medical-fill fs-5"></i>
+                                        </a>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                         @empty
@@ -230,7 +252,7 @@
                         <i class="bi bi-info-circle me-1"></i> Make sure to check before saving.
                     </div>
                     <button type="submit" class="btn btn-success fw-bold px-5 py-2 shadow-sm" style="border-radius: 12px;">
-                        <i class="bi bi-cloud-arrow-up-fill me-2"></i> Save Attendance
+                        <i class="bi bi-cloud-arrow-up-fill me-2"></i> Save Attendance & Docs
                     </button>
                 </div>
             </div>
@@ -242,21 +264,16 @@
 </div>
 
 <script>
-    // 1. Force Open Calendar (The Fix you requested)
     function openDatePicker() {
         const input = document.getElementById('dateInput');
-        
-        // This command works on modern browsers (Chrome 99+, Edge, Safari 15+)
         if (typeof input.showPicker === 'function') {
             input.showPicker();
         } else {
-            // Fallback for older browsers
             input.focus();
             input.click();
         }
     }
 
-    // 2. Update the visual date when the invisible input changes
     function updateDateDisplay(input) {
         const date = new Date(input.value);
         if (!isNaN(date.getTime())) {
@@ -265,9 +282,8 @@
         }
     }
 
-    // 3. Helper to quick-select "Present" for everyone
     function markAllPresent() {
-        document.querySelectorAll('input[value="present"]').forEach(radio => {
+        document.querySelectorAll('input[value="Hadir"]').forEach(radio => {
             radio.checked = true;
         });
     }

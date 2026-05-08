@@ -65,6 +65,39 @@ class AdminController extends Controller
     }
 
     // ==========================================
+    // NEW: ADMIN ATTENDANCE SUMMARY
+    // ==========================================
+    public function attendanceSummary(Request $request) {
+        $date = $request->date ?? \Carbon\Carbon::today('Asia/Kuala_Lumpur')->toDateString();
+        $classrooms = \App\Models\Classroom::with('teacher')->get();
+
+        $summary = [];
+        foreach($classrooms as $class) {
+            $total = \App\Models\Student::where('class_id', $class->class_id)->count();
+            
+            // Count attendance types
+            $present = \App\Models\Attendance::where('class_id', $class->class_id)
+                        ->where('date', $date)->where('status', 'Hadir')->count();
+                        
+            $absent = \App\Models\Attendance::where('class_id', $class->class_id)
+                        ->where('date', $date)->whereIn('status', ['Tak Hadir', 'Cuti'])->count();
+
+            $unmarked = $total - ($present + $absent);
+
+            $summary[] = (object) [
+                'class_name' => $class->class_name,
+                'teacher' => $class->teacher->name ?? 'No Teacher',
+                'total' => $total,
+                'present' => $present,
+                'absent' => $absent,
+                'unmarked' => $unmarked < 0 ? 0 : $unmarked
+            ];
+        }
+
+        return view('admin.attendance-summary', compact('summary', 'date'));
+    }
+
+    // ==========================================
     // 9.0 REPORT MANAGEMENT (Process 9.0 in DFD)
     // ==========================================
     public function reports() { 

@@ -14,6 +14,10 @@ use App\Models\Payment;
 use App\Models\Attendance; 
 use App\Models\Classroom;  
 use Carbon\Carbon;
+use App\Models\DailyLog;
+use App\Models\Assessment;
+use App\Models\AssessmentResult;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ParentController extends Controller
 {
@@ -24,15 +28,12 @@ class ParentController extends Controller
     {
         $parent = Auth::guard('parent')->user();
         
-        // Safety check to prevent portal leaking
         if (!$parent) {
             return redirect()->route('login');
         }
 
-        // 1. Fetch Child Info
         $student = Student::where('parent_id', $parent->parent_id)->first();
 
-        // Safety check if no student assigned
         if(!$student) {
             return view('parent.dashboard', [
                 'parent' => $parent, 'student' => null, 'fees' => 0.00, 
@@ -40,12 +41,10 @@ class ParentController extends Controller
             ]);
         }
 
-        // 2. Calculate Outstanding Fees
         $fees = Payment::where('student_id', $student->student_id)
                        ->where('status', 'Unpaid')
                        ->sum('amount');
 
-        // 3. Calculate Attendance %
         $totalDays = Attendance::where('student_id', $student->student_id)->count();
         $presentDays = Attendance::where('student_id', $student->student_id)
                                  ->where('status', 'Present') 
@@ -53,7 +52,6 @@ class ParentController extends Controller
                                  
         $attendance = $totalDays > 0 ? round(($presentDays / $totalDays) * 100) : 0;
 
-        // 4. Get Class Teacher
         $teacher = null;
         if($student->class_id) {
             $classroom = Classroom::find($student->class_id);
@@ -62,10 +60,8 @@ class ParentController extends Controller
             }
         }
 
-        // 5. Fetch Latest 3 Announcements
         $notices = Event::latest()->take(3)->get();
 
-        // 6. Mini Chat Preview Logic
         $latestMsg = Message::where(function($q) use ($parent) {
             $q->where('sender_id', $parent->parent_id)->where('sender_type', 'App\Models\Guardian')
               ->where('receiver_type', 'App\Models\Teacher');
@@ -75,6 +71,69 @@ class ParentController extends Controller
         })->latest()->first();
 
         return view('parent.dashboard', compact('parent', 'student', 'fees', 'attendance', 'notices', 'teacher', 'latestMsg'));
+    }
+
+    // ==========================================
+    // NEW: DAILY LOGS VIEWER
+    // ==========================================
+    public function dailyLogs(Request $request) {
+        $parent = Auth::guard('parent')->user();
+        if (!$parent) return redirect()->route('login');
+
+        // Get selected date or default to today
+        $date = $request->date ?? Carbon::today('Asia/Kuala_Lumpur')->toDateString();
+
+        // Get all children belonging to this parent
+        $students = Student::where('parent_id', $parent->parent_id)->get();
+
+        // Fetch logs for these children on the selected date
+        $logs = DailyLog::whereIn('student_id', $students->pluck('student_id'))
+                        ->where('date', $date)
+                        ->get()
+                        ->keyBy('student_id');
+
+        return view('parent.daily-logs', compact('students', 'date', 'logs'));
+    }
+
+    // ==========================================
+    // NEW: REPORT CARDS DASHBOARD
+    // ==========================================
+    public function reportCards() {
+        $parent = Auth::guard('parent')->user();
+        if (!$parent) return redirect()->route('login');
+
+        $students = Student::where('parent_id', $parent->parent_id)->get();
+        $assessments = Assessment::all(); // Term 1, Term 2, etc.
+
+        return view('parent.report-cards', compact('students', 'assessments'));
+    }
+
+    // ==========================================
+    // NEW: GENERATE & DOWNLOAD PDF
+    // ==========================================
+    public function downloadReportCard(int $student_id, int $assessment_id)  {
+        // Ensure this child actually belongs to the logged-in parent!
+        $parent = Auth::guard('parent')->user();
+        $student = Student::where('student_id', $student_id)->where('parent_id', $parent->parent_id)->firstOrFail();
+        
+        $assessment = Assessment::findOrFail($assessment_id);
+        
+        // Fetch grades with their associated Subjects
+        $results = AssessmentResult::with('subject')
+                    ->where('student_id', $student_id)
+                    ->where('assessment_id', $assessment_id)
+                    ->get();
+
+        // Check if there are actually grades to print
+        if($results->isEmpty()) {
+            return back()->with('error', 'No grades published for this term yet.');
+        }
+
+        // Generate the PDF using a shared view
+        $pdf = Pdf::loadView('reports.kspk-report-card', compact('student', 'assessment', 'results'));
+        
+        // Download the file
+        return $pdf->download('Report_Card_'.$student->student_name.'_'.$assessment->name.'.pdf');
     }
 
     // ==========================================
@@ -141,7 +200,6 @@ class ParentController extends Controller
             return view('parent.payment', ['pendingInvoices' => [], 'paymentHistory' => []]);
         }
 
-        // FIXED: Added 'Pending' to the array so parents can still see invoices waiting for Admin approval
         $pendingInvoices = Payment::where('student_id', $student->student_id)
                                   ->whereIn('status', ['Unpaid', 'Pending']) 
                                   ->orderBy('created_at', 'desc')
@@ -159,10 +217,9 @@ class ParentController extends Controller
     // 6. UPLOAD RECEIPT
     // ==========================================
     public function uploadReceipt(Request $request) {
-        // 1. Validate the file type and size to prevent errors
         $request->validate([
             'amount' => 'required|numeric|min:1',
-            'receipt' => 'required|file|mimes:pdf,jpg,jpeg,png|max:2048', // Max 2MB
+            'receipt' => 'required|file|mimes:pdf,jpg,jpeg,png|max:2048', 
         ]);
         
         $parent = Auth::guard('parent')->user();
@@ -172,29 +229,27 @@ class ParentController extends Controller
             return back()->with('error', 'Cannot process payment. No student assigned to your account.');
         }
 
-        // 2. Store the uploaded file safely in the public disk
         $receiptPath = null;
         if ($request->hasFile('receipt')) {
             $receiptPath = $request->file('receipt')->store('receipts', 'public');
         }
 
-        // 3. Create the Pending Payment record for Admin Verification
         Payment::create([
             'student_id' => $student->student_id,
-            'title' => $request->reference ?? 'Monthly Fee Payment', // FIXED: Added 'title' to prevent SQL Error
+            'title' => $request->reference ?? 'Monthly Fee Payment', 
             'amount' => $request->amount,
             'receipt_path' => $receiptPath,
-            'status' => 'Pending', // Triggers visibility in Admin Dashboard
+            'status' => 'Pending', 
             'admin_remarks' => $request->reference ?? 'Monthly Fee Payment' 
         ]);
 
         return back()->with('success', 'Receipt uploaded successfully! Waiting for Admin verification.');
     }
+
     // ==========================================
-    // 7. EVENTS CALENDAR (FIXED FOR UTC+8 TALLY)
+    // 7. EVENTS CALENDAR
     // ==========================================
     public function events() {
-        // Fetch and normalize dates to prevent UTC+8 timezone shifts in JS
         $upcomingEvents = Event::where('start_date', '>=', now()->startOfDay())
             ->orderBy('start_date', 'asc')
             ->get()
@@ -202,7 +257,6 @@ class ParentController extends Controller
                 return [
                     'title' => $event->title,
                     'description' => $event->description,
-                    // Force simple string date so JS doesn't shift it
                     'date_only' => Carbon::parse($event->start_date)->toDateString(),
                     'theme' => $event->theme,
                     'start_date_raw' => $event->start_date 

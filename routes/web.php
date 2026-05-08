@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\ParentController;
-use App\Http\Controllers\AuthController; // <-- NEW IMPORT
+use App\Http\Controllers\AuthController; 
 
 // --- LOGIN & AUTHENTICATION (Process 2.0) ---
 Route::get('/', function () { 
@@ -36,6 +36,9 @@ Route::post('/logout', function (Request $request) {
 Route::middleware('auth:admin')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
 
+    // NEW: Admin Attendance Summary
+    Route::get('/attendance', [AdminController::class, 'attendanceSummary'])->name('attendance.summary');
+
     // --- Process 1.0: User Management ---
     Route::get('/users', [AdminController::class, 'users'])->name('users');
     Route::post('/users/store', [AdminController::class, 'storeUser'])->name('users.store');
@@ -57,7 +60,7 @@ Route::middleware('auth:admin')->prefix('admin')->name('admin.')->group(function
     // --- 8.0 FINANCE (Process 8.0: Payment Management) ---
     Route::get('/finance', [AdminController::class, 'finance'])->name('finance');
     
-    // NEW: Generate Monthly Bills Route
+    // Generate Monthly Bills Route
     Route::post('/finance/generate-bills', [AdminController::class, 'generateMonthlyBills'])->name('finance.generate-bills');
     
     Route::post('/finance/store', [AdminController::class, 'storeTransaction'])->name('finance.store');
@@ -114,13 +117,22 @@ Route::middleware('auth:admin')->prefix('admin')->name('admin.')->group(function
 Route::middleware('auth:teacher')->prefix('teacher')->name('teacher.')->group(function () {
     Route::get('/dashboard', [TeacherController::class, 'dashboard'])->name('dashboard');
 
+    // NEW: Daily Logs for Teacher
+    Route::get('/daily-logs', [TeacherController::class, 'dailyLogs'])->name('daily-logs');
+    Route::post('/daily-logs/store', [TeacherController::class, 'storeDailyLogs'])->name('daily-logs.store');
+
     // Process 6.0: Attendance
     Route::get('/attendance', [TeacherController::class, 'attendance'])->name('attendance');
     Route::post('/attendance/store', [TeacherController::class, 'storeAttendance'])->name('attendance.store');
+    Route::get('/attendance/print', [TeacherController::class, 'printAttendance'])->name('attendance.print'); // NEW: PDF Export
 
-    // Process 5.0: Grading
+    // Process 5.0: Grading (Updated for KSPK Mastery Levels)
     Route::get('/grading', [TeacherController::class, 'grading'])->name('grading');
     Route::post('/grading/store', [TeacherController::class, 'storeGrade'])->name('grading.store');
+
+    // NEW PREP: Print Report Cards (Teacher)
+    Route::get('/report-cards', [TeacherController::class, 'reportCards'])->name('report-cards');
+    Route::get('/report-cards/print/{assessment_id}', [TeacherController::class, 'printReportCards'])->name('report-cards.print');
 
     // Process 7.0: Chat
     Route::get('/communication', [TeacherController::class, 'communication'])->name('communication');
@@ -132,6 +144,11 @@ Route::middleware('auth:teacher')->prefix('teacher')->name('teacher.')->group(fu
 Route::middleware('auth:parent')->prefix('parent')->name('parent.')->group(function () {
     Route::get('/dashboard', [ParentController::class, 'dashboard'])->name('dashboard');
     
+    // NEW PREP: Parent Views
+    Route::get('/daily-logs', [ParentController::class, 'dailyLogs'])->name('daily-logs'); // See child's mood/meals
+    Route::get('/report-cards', [ParentController::class, 'reportCards'])->name('report-cards'); // View KSPK Grades
+    Route::get('/report-cards/download/{student_id}/{assessment_id}', [ParentController::class, 'downloadReportCard'])->name('report-cards.download'); // Download PDF
+
     // Full Screen Chat
     Route::get('/chat', [ParentController::class, 'chat'])->name('communication'); 
     Route::post('/chat/send', [ParentController::class, 'sendMessage'])->name('chat.send');
