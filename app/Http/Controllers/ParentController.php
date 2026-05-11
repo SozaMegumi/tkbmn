@@ -13,10 +13,10 @@ use App\Models\Guardian;
 use App\Models\Payment;    
 use App\Models\Attendance; 
 use App\Models\Classroom;  
-use Carbon\Carbon;
 use App\Models\DailyLog;
 use App\Models\Assessment;
 use App\Models\AssessmentResult;
+use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class ParentController extends Controller
@@ -27,66 +27,51 @@ class ParentController extends Controller
     public function dashboard()
     {
         $parent = Auth::guard('parent')->user();
-        
-        if (!$parent) {
-            return redirect()->route('login');
-        }
+        if (!$parent) return redirect()->route('login');
 
-        $student = Student::where('parent_id', $parent->parent_id)->first();
+        // Fetch ALL children belonging to this parent
+        $children = Student::where('parent_id', $parent->parent_id)->with('classroom')->get();
+        $childIds = $children->pluck('student_id');
 
-        if(!$student) {
+        if($children->isEmpty()) {
             return view('parent.dashboard', [
-                'parent' => $parent, 'student' => null, 'fees' => 0.00, 
-                'attendance' => 0, 'notices' => [], 'teacher' => null, 'latestMsg' => null
+                'parent' => $parent, 'children' => collect(), 'pendingPayments' => collect(), 
+                'attendances' => collect(), 'upcomingEvents' => collect(), 'today' => now()->toDateString()
             ]);
         }
 
-        $fees = Payment::where('student_id', $student->student_id)
-                       ->where('status', 'Unpaid')
-                       ->sum('amount');
+        $today = Carbon::today('Asia/Kuala_Lumpur')->toDateString();
 
-        $totalDays = Attendance::where('student_id', $student->student_id)->count();
-        $presentDays = Attendance::where('student_id', $student->student_id)
-                                 ->where('status', 'Present') 
-                                 ->count();
-                                 
-        $attendance = $totalDays > 0 ? round(($presentDays / $totalDays) * 100) : 0;
+        // 1. Get today's attendance for these children
+        $attendances = Attendance::whereIn('student_id', $childIds)
+                                 ->where('date', $today)
+                                 ->get()
+                                 ->keyBy('student_id');
 
-        $teacher = null;
-        if($student->class_id) {
-            $classroom = Classroom::find($student->class_id);
-            if($classroom && $classroom->teacher_id) {
-                $teacher = Teacher::where('teacher_id', $classroom->teacher_id)->first();
-            }
-        }
+        // 2. Check for unpaid/pending fees across all children
+        $pendingPayments = Payment::whereIn('student_id', $childIds)
+                                  ->whereIn('status', ['Unpaid', 'Pending'])
+                                  ->get();
 
-        $notices = Event::latest()->take(3)->get();
+        // 3. Fetch upcoming school events
+        $upcomingEvents = Event::where('start_date', '>=', now()->startOfDay())
+                               ->orderBy('start_date', 'asc')
+                               ->take(3)
+                               ->get();
 
-        $latestMsg = Message::where(function($q) use ($parent) {
-            $q->where('sender_id', $parent->parent_id)->where('sender_type', 'App\Models\Guardian')
-              ->where('receiver_type', 'App\Models\Teacher');
-        })->orWhere(function($q) use ($parent) {
-            $q->where('receiver_id', $parent->parent_id)->where('receiver_type', 'App\Models\Guardian')
-              ->where('sender_type', 'App\Models\Teacher');
-        })->latest()->first();
-
-        return view('parent.dashboard', compact('parent', 'student', 'fees', 'attendance', 'notices', 'teacher', 'latestMsg'));
+        return view('parent.dashboard', compact('parent', 'children', 'attendances', 'pendingPayments', 'upcomingEvents', 'today'));
     }
 
     // ==========================================
-    // NEW: DAILY LOGS VIEWER
+    // 2. DAILY LOGS VIEWER
     // ==========================================
     public function dailyLogs(Request $request) {
         $parent = Auth::guard('parent')->user();
         if (!$parent) return redirect()->route('login');
 
-        // Get selected date or default to today
-        $date = $request->date ?? Carbon::today('Asia/Kuala_Lumpur')->toDateString();
-
-        // Get all children belonging to this parent
         $students = Student::where('parent_id', $parent->parent_id)->get();
+        $date = $request->get('date', Carbon::today('Asia/Kuala_Lumpur')->toDateString());
 
-        // Fetch logs for these children on the selected date
         $logs = DailyLog::whereIn('student_id', $students->pluck('student_id'))
                         ->where('date', $date)
                         ->get()
@@ -96,48 +81,41 @@ class ParentController extends Controller
     }
 
     // ==========================================
-    // NEW: REPORT CARDS DASHBOARD
+    // 3. REPORT CARDS DASHBOARD
     // ==========================================
     public function reportCards() {
         $parent = Auth::guard('parent')->user();
         if (!$parent) return redirect()->route('login');
 
         $students = Student::where('parent_id', $parent->parent_id)->get();
-        $assessments = Assessment::all(); // Term 1, Term 2, etc.
+        $assessments = Assessment::all();
 
         return view('parent.report-cards', compact('students', 'assessments'));
     }
 
     // ==========================================
-    // NEW: GENERATE & DOWNLOAD PDF
+    // 4. DOWNLOAD REPORT CARD PDF
     // ==========================================
     public function downloadReportCard(int $student_id, int $assessment_id)  {
-        // Ensure this child actually belongs to the logged-in parent!
         $parent = Auth::guard('parent')->user();
         $student = Student::where('student_id', $student_id)->where('parent_id', $parent->parent_id)->firstOrFail();
-        
         $assessment = Assessment::findOrFail($assessment_id);
         
-        // Fetch grades with their associated Subjects
         $results = AssessmentResult::with('subject')
                     ->where('student_id', $student_id)
                     ->where('assessment_id', $assessment_id)
                     ->get();
 
-        // Check if there are actually grades to print
         if($results->isEmpty()) {
-            return back()->with('error', 'No grades published for this term yet.');
+            return back()->with('error', 'Belum ada gred yang dimuat naik untuk penggal ini.');
         }
 
-        // Generate the PDF using a shared view
         $pdf = Pdf::loadView('reports.kspk-report-card', compact('student', 'assessment', 'results'));
-        
-        // Download the file
-        return $pdf->download('Report_Card_'.$student->student_name.'_'.$assessment->name.'.pdf');
+        return $pdf->download('Laporan_'.$student->student_name.'_'.$assessment->name.'.pdf');
     }
 
     // ==========================================
-    // 2. CHAT PAGE
+    // 5. CHAT PAGE
     // ==========================================
     public function chat(Request $request) {
         $parent = Auth::guard('parent')->user();
@@ -159,15 +137,25 @@ class ParentController extends Controller
     }
 
     // ==========================================
-    // 3. SEND MESSAGE
+    // 6. SEND MESSAGE (Updated for Attachments)
     // ==========================================
     public function sendMessage(Request $request) {
         $request->validate([
             'receiver_id' => 'required',
-            'message'     => 'required|string'
+            'message'     => 'nullable|string',
+            'attachment'  => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048'
         ]);
 
         $parent = Auth::guard('parent')->user();
+        
+        $attachmentPath = null;
+        if ($request->hasFile('attachment')) {
+            $attachmentPath = $request->file('attachment')->store('chat_attachments', 'public');
+        }
+
+        if (!$request->message && !$attachmentPath) {
+            return back()->with('error', 'Sila masukkan mesej atau muat naik fail.');
+        }
 
         Message::create([
             'sender_id'       => $parent->parent_id, 
@@ -175,6 +163,7 @@ class ParentController extends Controller
             'receiver_id'     => $request->receiver_id,
             'receiver_type'   => 'App\Models\Teacher', 
             'message_content' => $request->message,
+            'attachment'      => $attachmentPath,
             'read_at'         => null
         ]);
 
@@ -182,7 +171,7 @@ class ParentController extends Controller
     }
 
     // ==========================================
-    // 4. NOTICES PAGE
+    // 7. NOTICES PAGE
     // ==========================================
     public function notices() {
         $notices = Event::orderBy('start_date', 'desc')->paginate(10);
@@ -190,7 +179,7 @@ class ParentController extends Controller
     }
 
     // ==========================================
-    // 5. PAYMENT PAGE 
+    // 8. PAYMENT PAGE 
     // ==========================================
     public function payment() {
         $parent = Auth::guard('parent')->user();
@@ -214,7 +203,7 @@ class ParentController extends Controller
     }
 
     // ==========================================
-    // 6. UPLOAD RECEIPT
+    // 9. UPLOAD RECEIPT
     // ==========================================
     public function uploadReceipt(Request $request) {
         $request->validate([
@@ -226,7 +215,7 @@ class ParentController extends Controller
         $student = Student::where('parent_id', $parent->parent_id)->first();
 
         if(!$student) {
-            return back()->with('error', 'Cannot process payment. No student assigned to your account.');
+            return back()->with('error', 'Gagal memproses. Tiada rekod murid di bawah akaun anda.');
         }
 
         $receiptPath = null;
@@ -236,18 +225,18 @@ class ParentController extends Controller
 
         Payment::create([
             'student_id' => $student->student_id,
-            'title' => $request->reference ?? 'Monthly Fee Payment', 
+            'title' => $request->reference ?? 'Bayaran Yuran Bulanan', 
             'amount' => $request->amount,
             'receipt_path' => $receiptPath,
             'status' => 'Pending', 
-            'admin_remarks' => $request->reference ?? 'Monthly Fee Payment' 
+            'admin_remarks' => $request->reference ?? 'Bayaran Yuran Bulanan' 
         ]);
 
-        return back()->with('success', 'Receipt uploaded successfully! Waiting for Admin verification.');
+        return back()->with('success', 'Resit berjaya dimuat naik! Sila tunggu pengesahan Admin.');
     }
 
     // ==========================================
-    // 7. EVENTS CALENDAR
+    // 10. EVENTS CALENDAR
     // ==========================================
     public function events() {
         $upcomingEvents = Event::where('start_date', '>=', now()->startOfDay())
@@ -264,7 +253,6 @@ class ParentController extends Controller
             });
 
         $allNotices = Event::latest()->paginate(5);
-
         return view('parent.events', compact('upcomingEvents', 'allNotices'));
     }
 }

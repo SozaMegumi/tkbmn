@@ -8,15 +8,14 @@ use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\ParentController;
 use App\Http\Controllers\AuthController; 
 
-// --- LOGIN & AUTHENTICATION (Process 2.0) ---
+// --- LOGIN & AUTHENTICATION ---
 Route::get('/', function () { 
     return view('auth.login'); 
 })->name('login');
 
-// Using AuthController for ID-Based Login
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 
-// --- FORGOT PASSWORD & OTP ROUTES ---
+// --- FORGOT PASSWORD & OTP ---
 Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])->name('password.forgot');
 Route::post('/forgot-password', [AuthController::class, 'sendResetCode'])->name('password.sendCode');
 Route::get('/verify-code', [AuthController::class, 'showVerifyCode'])->name('password.verify.page');
@@ -28,132 +27,107 @@ Route::post('/logout', function (Request $request) {
     Auth::guard('teacher')->logout();
     Auth::guard('parent')->logout();
     $request->session()->invalidate();
+    $request->session()->regenerateToken();
     return redirect('/');
 })->name('logout');
 
 
-// --- ADMIN ROUTES (Processes 1.0, 3.0, 4.0, 8.0, 9.0, 10.0) ---
+// --- ADMIN ROUTES ---
 Route::middleware('auth:admin')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
-
-    // NEW: Admin Attendance Summary
     Route::get('/attendance', [AdminController::class, 'attendanceSummary'])->name('attendance.summary');
 
-    // --- Process 1.0: User Management ---
+    // Process 1.0: User Management
     Route::get('/users', [AdminController::class, 'users'])->name('users');
     Route::post('/users/store', [AdminController::class, 'storeUser'])->name('users.store');
     Route::put('/users/update/{id}', [AdminController::class, 'updateUser'])->name('users.update');
     Route::delete('/users/delete/{id}', [AdminController::class, 'deleteUser'])->name('users.delete');
 
-    // --- Process 3.0: Enrolment ---
+    // Process 3.0: Enrolment
     Route::get('/enrolment', [AdminController::class, 'enrolment'])->name('enrolment');
     Route::post('/enrolment/store', [AdminController::class, 'storeStudent'])->name('enrolment.store');
     Route::put('/enrolment/update/{id}', [AdminController::class, 'updateStudent'])->name('enrolment.update');
     Route::delete('/enrolment/delete/{id}', [AdminController::class, 'deleteStudent'])->name('enrolment.delete');
 
-    // 5.0 ASSESSMENT SETUP (Pengurusan Pentaksiran)
+    // 5.0 ASSESSMENT SETUP
     Route::get('/exams', [AdminController::class, 'exams'])->name('exams');
     Route::post('/exams/store', [AdminController::class, 'storeExam'])->name('exams.store');
     Route::put('/exams/{id}/update', [AdminController::class, 'updateExam'])->name('exams.update');
     Route::delete('/exams/{id}/delete', [AdminController::class, 'deleteExam'])->name('exams.delete');
     
-    // --- 8.0 FINANCE (Process 8.0: Payment Management) ---
+    // 8.0 FINANCE
     Route::get('/finance', [AdminController::class, 'finance'])->name('finance');
-    
-    // Generate Monthly Bills Route
     Route::post('/finance/generate-bills', [AdminController::class, 'generateMonthlyBills'])->name('finance.generate-bills');
-    
     Route::post('/finance/store', [AdminController::class, 'storeTransaction'])->name('finance.store');
     Route::delete('/finance/delete/{id}', [AdminController::class, 'deleteTransaction'])->name('finance.delete');
-    
-    // Parent Receipt Approvals (DFD Store 12 & 13)
     Route::post('/finance/approve/{id}', [AdminController::class, 'approvePayment'])->name('finance.approve');
     Route::post('/finance/reject/{id}', [AdminController::class, 'rejectPayment'])->name('finance.reject');
-    
-    // AJAX Cash Flow Data for dynamic monitoring (Process 9.0)
     Route::get('/finance/chart-data', [AdminController::class, 'getCashFlowData'])->name('finance.chart-data');
 
-    // Process 9.0: Reports
+    // 9.0 REPORTS
     Route::get('/reports', [AdminController::class, 'reports'])->name('reports');
-
-    // --- 10.0 ADMIN EVENTS ---
-    Route::get('/events', [AdminController::class, 'events'])->name('events');
-    Route::post('/events/store', [AdminController::class, 'storeEvent'])->name('events.store');
-    Route::put('/events/update/{id}', [AdminController::class, 'updateEvent'])->name('events.update');
-    Route::delete('/events/delete/{id}', [AdminController::class, 'deleteEvent'])->name('events.delete');
-
-    // 9.0 REPORT MANAGEMENT (PBMT Subsections)
     Route::prefix('reports')->name('reports.')->group(function () {
-        
-        // 1. Takwim Sesi Persekolahan
         Route::get('/takwim', [AdminController::class, 'reportTakwim'])->name('takwim');
         Route::post('/takwim/generate', [AdminController::class, 'generateTakwim'])->name('takwim.generate');
         Route::get('/takwim/print/{id}', [AdminController::class, 'printTakwim'])->name('takwim.print');
         Route::delete('/takwim/delete/{id}', [AdminController::class, 'deleteTakwim'])->name('takwim.delete');
 
-        // 2. Unjuran Permohonan
         Route::get('/unjuran', [AdminController::class, 'reportUnjuran'])->name('unjuran');
         Route::post('/unjuran/generate', [AdminController::class, 'generateUnjuran'])->name('unjuran.generate');
         Route::get('/unjuran/print/{id}', [AdminController::class, 'printUnjuran'])->name('unjuran.print');
         Route::delete('/unjuran/delete/{id}', [AdminController::class, 'deleteUnjuran'])->name('unjuran.delete');
 
-        // 3. Rumusan Berkelompok
         Route::get('/berkelompok', [AdminController::class, 'reportRumusan'])->name('berkelompok');
         Route::post('/berkelompok/generate', [AdminController::class, 'generateRumusan'])->name('berkelompok.generate');
         Route::get('/berkelompok/print/{id}', [AdminController::class, 'printRumusan'])->name('berkelompok.print');
         Route::delete('/berkelompok/delete/{id}', [AdminController::class, 'deleteRumusan'])->name('berkelompok.delete');
 
-        // 4. Prestasi Perbelanjaan
         Route::get('/prestasi', [AdminController::class, 'reportPrestasi'])->name('prestasi');
         Route::post('/prestasi/generate', [AdminController::class, 'generatePrestasi'])->name('prestasi.generate');
         Route::get('/prestasi/print/{id}', [AdminController::class, 'printPrestasi'])->name('prestasi.print');
         Route::delete('/prestasi/delete/{id}', [AdminController::class, 'deletePrestasi'])->name('prestasi.delete');
-        
     });
+
+    // 10.0 EVENTS
+    Route::get('/events', [AdminController::class, 'events'])->name('events');
+    Route::post('/events/store', [AdminController::class, 'storeEvent'])->name('events.store');
+    Route::put('/events/update/{id}', [AdminController::class, 'updateEvent'])->name('events.update');
+    Route::delete('/events/delete/{id}', [AdminController::class, 'deleteEvent'])->name('events.delete');
 });
 
 
-// --- TEACHER ROUTES (Processes 5.0, 6.0, 7.0) ---
+// --- TEACHER ROUTES ---
 Route::middleware('auth:teacher')->prefix('teacher')->name('teacher.')->group(function () {
     Route::get('/dashboard', [TeacherController::class, 'dashboard'])->name('dashboard');
-
-    // NEW: Daily Logs for Teacher
     Route::get('/daily-logs', [TeacherController::class, 'dailyLogs'])->name('daily-logs');
     Route::post('/daily-logs/store', [TeacherController::class, 'storeDailyLogs'])->name('daily-logs.store');
 
-    // Process 6.0: Attendance
     Route::get('/attendance', [TeacherController::class, 'attendance'])->name('attendance');
     Route::post('/attendance/store', [TeacherController::class, 'storeAttendance'])->name('attendance.store');
-    Route::get('/attendance/print', [TeacherController::class, 'printAttendance'])->name('attendance.print'); // NEW: PDF Export
+    Route::get('/attendance/print', [TeacherController::class, 'printAttendance'])->name('attendance.print');
 
-    // Process 5.0: Grading (Updated for KSPK Mastery Levels)
     Route::get('/grading', [TeacherController::class, 'grading'])->name('grading');
     Route::post('/grading/store', [TeacherController::class, 'storeGrade'])->name('grading.store');
 
-    // NEW PREP: Print Report Cards (Teacher)
     Route::get('/report-cards', [TeacherController::class, 'reportCards'])->name('report-cards');
     Route::get('/report-cards/print/{assessment_id}', [TeacherController::class, 'printReportCards'])->name('report-cards.print');
 
-    // Process 7.0: Chat
     Route::get('/communication', [TeacherController::class, 'communication'])->name('communication');
     Route::post('/communication/send', [TeacherController::class, 'sendMessage'])->name('chat.send');
 });
 
 
-// --- PARENT PORTAL ROUTING ---
+// --- PARENT PORTAL ROUTES ---
 Route::middleware('auth:parent')->prefix('parent')->name('parent.')->group(function () {
     Route::get('/dashboard', [ParentController::class, 'dashboard'])->name('dashboard');
-    
-    // NEW PREP: Parent Views
-    Route::get('/daily-logs', [ParentController::class, 'dailyLogs'])->name('daily-logs'); // See child's mood/meals
-    Route::get('/report-cards', [ParentController::class, 'reportCards'])->name('report-cards'); // View KSPK Grades
-    Route::get('/report-cards/download/{student_id}/{assessment_id}', [ParentController::class, 'downloadReportCard'])->name('report-cards.download'); // Download PDF
+    Route::get('/daily-logs', [ParentController::class, 'dailyLogs'])->name('daily-logs');
+    Route::get('/report-cards', [ParentController::class, 'reportCards'])->name('report-cards');
+    Route::get('/report-cards/download/{student_id}/{assessment_id}', [ParentController::class, 'downloadReportCard'])->name('report-cards.download');
 
-    // Full Screen Chat
+    // Fixed: Named this consistently for the sendMessage logic
     Route::get('/chat', [ParentController::class, 'chat'])->name('communication'); 
     Route::post('/chat/send', [ParentController::class, 'sendMessage'])->name('chat.send');
 
-    // Full Screen Payment/Finance (Process 8.0: Payment Info Flow)
     Route::get('/payment', [ParentController::class, 'payment'])->name('payment');
     Route::post('/payment/upload', [ParentController::class, 'uploadReceipt'])->name('payment.upload');
 

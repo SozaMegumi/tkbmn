@@ -141,17 +141,15 @@ class TeacherController extends Controller
 
         $date = $request->get('date', Carbon::today('Asia/Kuala_Lumpur')->toDateString());
         
-        // FIX: Grab the class_id from the URL parameter we added to the button
+        // FIX: Grab the class_id from the URL parameter
         $classId = $request->get('class_id', $teacher->assigned_class_id);
         
         $classroom = Classroom::find($classId);
 
-        // Safety check to prevent the "Attempt to read property 'class_name' on null" error
         if (!$classroom) {
             return back()->with('error', 'Sila pastikan kelas telah dipilih sebelum mencetak PDF.');
         }
 
-        // Fetch students and their attendance for the specific date
         $students = Student::where('class_id', $classId)->get()->map(function($student) use ($date) {
             $student->attendance = Attendance::where('student_id', $student->student_id)
                                              ->where('date', $date)->first();
@@ -170,11 +168,8 @@ class TeacherController extends Controller
         if (!$teacher) return redirect()->route('login');
 
         $classId = $teacher->assigned_class_id;
-        
         $date = $request->date ?? Carbon::today('Asia/Kuala_Lumpur')->toDateString();
-        
         $students = Student::where('class_id', $classId)->get();
-        
         $logs = DailyLog::whereIn('student_id', $students->pluck('student_id'))
                         ->where('date', $date)
                         ->get()
@@ -211,11 +206,8 @@ class TeacherController extends Controller
         if (!$teacher) return redirect()->route('login');
 
         $classId = $teacher->assigned_class_id;
-        
         $students = Student::where('class_id', $classId)->get();
         $assessments = Assessment::all(); 
-        
-        // Group subjects by their Komponen (e.g., Bahasa Melayu, English)
         $groupedSubjects = Subject::all()->groupBy('komponen');
         
         $selectedStudentId = $request->student_id;
@@ -226,8 +218,6 @@ class TeacherController extends Controller
 
         if ($selectedStudentId && $selectedAssessment) {
             $selectedStudent = Student::with('classroom')->where('student_id', $selectedStudentId)->first();
-            
-            // Fetch all grades for this ONE student for the selected term
             $results = AssessmentResult::where('student_id', $selectedStudentId)
                 ->where('assessment_id', $selectedAssessment)
                 ->get()
@@ -243,8 +233,6 @@ class TeacherController extends Controller
     public function storeGrade(Request $request) {
         $student_id = $request->student_id;
         $assessment_id = $request->assessment_id;
-        
-        // Now grades array looks like: [subject_id => ['mastery_level' => 1, 'remarks' => 'Good']]
         $grades = $request->grades; 
 
         if($grades) {
@@ -267,9 +255,6 @@ class TeacherController extends Controller
         return back()->with('success', 'Student Report Card saved successfully!');
     }
 
-    // ==========================================
-    // NEW: PRINT REPORT CARDS (CLASS BATCH)
-    // ==========================================
     public function reportCards() {
         $teacher = Auth::guard('teacher')->user();
         if (!$teacher) return redirect()->route('login');
@@ -281,21 +266,15 @@ class TeacherController extends Controller
     public function printReportCards($assessment_id) {
         $teacher = Auth::guard('teacher')->user();
         $assessment = Assessment::findOrFail($assessment_id);
-        
-        // Get all students in the teacher's class
         $students = Student::where('class_id', $teacher->assigned_class_id)->get();
 
-        // Fetch all results for the class for this assessment
         $allResults = AssessmentResult::with('subject')
             ->whereIn('student_id', $students->pluck('student_id'))
             ->where('assessment_id', $assessment_id)
             ->get()
-            ->groupBy('student_id'); // Group by student so we can loop through them
+            ->groupBy('student_id');
 
-        // Load the PDF View 
         $pdf = Pdf::loadView('reports.kspk-class-report', compact('students', 'assessment', 'allResults'));
-        
-        // Stream opens it in the browser instead of auto-downloading
         return $pdf->stream('Class_Report_Cards_'.$assessment->name.'.pdf');
     }
 
@@ -329,13 +308,27 @@ class TeacherController extends Controller
         return view('teacher.communication', compact('parents', 'activeParent', 'messages'));
     }
 
+    // ==========================================
+    // SEND MESSAGE (Updated for Attachments)
+    // ==========================================
     public function sendMessage(Request $request) {
         $request->validate([
             'receiver_id' => 'required',
-            'message'     => 'required|string'
+            'message'     => 'nullable|string',
+            'attachment'  => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048' // Max 2MB
         ]);
 
         $teacher = Auth::guard('teacher')->user(); 
+        
+        $attachmentPath = null;
+        if ($request->hasFile('attachment')) {
+            $attachmentPath = $request->file('attachment')->store('chat_attachments', 'public');
+        }
+
+        // Prevent sending empty content
+        if (!$request->message && !$attachmentPath) {
+            return back()->with('error', 'Sila masukkan mesej atau muat naik fail.');
+        }
 
         Message::create([
             'sender_id'       => $teacher->teacher_id,
@@ -343,6 +336,7 @@ class TeacherController extends Controller
             'receiver_id'     => $request->receiver_id,
             'receiver_type'   => 'App\Models\Guardian', 
             'message_content' => $request->message,
+            'attachment'      => $attachmentPath,
             'read_at'         => null
         ]);
 

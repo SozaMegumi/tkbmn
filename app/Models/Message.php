@@ -21,6 +21,7 @@ class Message extends Model
         'receiver_type',
         'message_content', // Renamed from 'message'
         'read_at',
+        'attachment', // Added attachment field
     ];
 
     // 3. Casts

@@ -79,7 +79,7 @@
     
     /* ME (Right) = Teacher */
     .bubble-me {
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); /* Blue for Teacher */
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
         color: white; border-radius: 18px 18px 4px 18px;
         align-self: flex-end; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.2);
     }
@@ -87,6 +87,14 @@
     .message-time { font-size: 0.7rem; margin-top: 4px; opacity: 0.8; display: block; }
     .bubble-me .message-time { text-align: right; color: rgba(255,255,255,0.85); }
     
+    /* Attachment Styles */
+    .attachment-preview img {
+        max-width: 100%;
+        border-radius: 12px;
+        margin-bottom: 8px;
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+
     /* MISC UI */
     .avatar-circle {
         width: 45px; height: 45px; border-radius: 50%;
@@ -104,7 +112,6 @@
         background: #2563eb; color: white; display: flex; align-items: center; justify-content: center;
     }
 
-    /* Scrollbars */
     .contact-scroll-area::-webkit-scrollbar, .chat-history::-webkit-scrollbar { width: 5px; }
     .contact-scroll-area::-webkit-scrollbar-thumb, .chat-history::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
 </style>
@@ -131,7 +138,6 @@
                 <small class="text-uppercase text-muted fw-bold px-2 mb-3 d-block" style="font-size: 0.7rem;">Parents</small>
                 
                 @forelse($parents as $parent)
-                    {{-- Note: Using parent_id based on your Model --}}
                     <a href="{{ route('teacher.communication', ['parent_id' => $parent->parent_id]) }}" 
                        class="contact-item {{ (isset($activeParent) && $activeParent->parent_id == $parent->parent_id) ? 'active' : '' }}">
                         
@@ -173,18 +179,33 @@
                     </div>
 
                     @forelse($messages as $msg)
-                        {{-- LOGIC: Check if Sender is 'App\Models\Teacher'. If yes, it's ME. --}}
-                        @if($msg->sender_type == 'App\Models\Teacher')
-                            <div class="message-bubble bubble-me">
+                        @php $isMe = ($msg->sender_type == 'App\Models\Teacher'); @endphp
+                        <div class="message-bubble {{ $isMe ? 'bubble-me' : 'bubble-them' }}">
+                            
+                            @if($msg->attachment)
+                                @php $ext = pathinfo($msg->attachment, PATHINFO_EXTENSION); @endphp
+                                <div class="attachment-preview">
+                                    @if(in_array(strtolower($ext), ['jpg', 'jpeg', 'png', 'webp']))
+                                        <a href="{{ asset('storage/'.$msg->attachment) }}" target="_blank">
+                                            <img src="{{ asset('storage/'.$msg->attachment) }}" alt="Image Preview">
+                                        </a>
+                                    @else
+                                        <a href="{{ asset('storage/'.$msg->attachment) }}" target="_blank" class="btn btn-sm {{ $isMe ? 'btn-light text-primary' : 'btn-primary' }} mb-2 w-100 text-start">
+                                            <i class="bi bi-file-earmark-arrow-down-fill me-2"></i> Download {{ strtoupper($ext) }}
+                                        </a>
+                                    @endif
+                                </div>
+                            @endif
+
+                            @if($msg->message_content)
                                 {{ $msg->message_content }}
-                                <span class="message-time">{{ $msg->created_at->format('h:i A') }} <i class="bi bi-check-all ms-1"></i></span>
-                            </div>
-                        @else
-                            <div class="message-bubble bubble-them">
-                                {{ $msg->message_content }}
-                                <span class="message-time">{{ $msg->created_at->format('h:i A') }}</span>
-                            </div>
-                        @endif
+                            @endif
+
+                            <span class="message-time">
+                                {{ $msg->created_at->format('h:i A') }} 
+                                @if($isMe) <i class="bi bi-check-all ms-1"></i> @endif
+                            </span>
+                        </div>
                     @empty
                         <div class="text-center mt-5">
                             <i class="bi bi-chat-text fs-1 text-muted opacity-25"></i>
@@ -194,12 +215,17 @@
                 </div>
 
                 <div class="chat-input-area">
-                    <form action="{{ route('teacher.chat.send') }}" method="POST" class="chat-bar-wrapper">
+                   <form action="{{ route('teacher.chat.send') }}" method="POST" enctype="multipart/form-data" class="chat-bar-wrapper">
                         @csrf
                         <input type="hidden" name="receiver_id" value="{{ $activeParent->parent_id }}">
                         
-                        <button type="button" class="btn btn-link text-secondary p-0 me-2"><i class="bi bi-paperclip fs-5"></i></button>
-                        <input type="text" name="message" class="chat-input" placeholder="Type a message..." required autocomplete="off">
+                        <label class="btn btn-link text-secondary p-0 me-2 mb-0" style="cursor: pointer;">
+                            <i class="bi bi-paperclip fs-5" id="clip-icon"></i>
+                            <input type="file" name="attachment" class="d-none" id="fileInput" onchange="handleFileSelected()">
+                        </label>
+
+                        <input type="text" name="message" class="chat-input" placeholder="Type a message..." autocomplete="off">
+                        
                         <button type="submit" class="btn-send"><i class="bi bi-send-fill fs-6 ps-1"></i></button>
                     </form>
                 </div>
@@ -219,6 +245,15 @@
 </div>
 
 <script>
+    function handleFileSelected() {
+        const fileInput = document.getElementById('fileInput');
+        const icon = document.getElementById('clip-icon');
+        if (fileInput.files.length > 0) {
+            icon.classList.remove('bi-paperclip');
+            icon.classList.add('bi-file-earmark-check-fill', 'text-success');
+        }
+    }
+
     document.addEventListener("DOMContentLoaded", function() {
         var objDiv = document.getElementById("messagesContainer");
         if(objDiv) {

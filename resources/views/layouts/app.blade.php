@@ -138,11 +138,16 @@
                 <li class="nav-item"><a class="nav-link {{ request()->routeIs('admin.exams*') ? 'active' : '' }}" href="{{ route('admin.exams') }}"><i class="bi bi-journal-bookmark-fill"></i> Exam Setup</a></li>
                 <li class="nav-item"><a class="nav-link {{ request()->routeIs('admin.finance*') ? 'active' : '' }}" href="{{ route('admin.finance') }}"><i class="bi bi-wallet-fill"></i> Finance</a></li>
                 
-                <!-- NEW COLLAPSIBLE REPORTS MENU -->
+                <li class="nav-item">
+                     <a class="nav-link {{ request()->routeIs('admin.reports') ? 'active' : '' }}" href="{{ route('admin.reports') }}">
+                        <i class="bi bi-bar-chart-fill me-2"></i>
+                        <span>Laporan & Analitik</span>
+                     </a>
+                </li>
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}" data-bs-toggle="collapse" href="#reportsMenu" role="button" aria-expanded="{{ request()->routeIs('admin.reports.*') ? 'true' : 'false' }}">
                         <i class="bi bi-file-earmark-text-fill"></i> 
-                        <span class="flex-grow-1">Reports</span>
+                        <span class="flex-grow-1">PBMT Reports</span>
                         <i class="bi bi-chevron-down ms-auto" style="font-size: 0.8rem; width: auto; margin-right: 0;"></i>
                     </a>
                     <div class="collapse {{ request()->routeIs('admin.reports.*') ? 'show' : '' }}" id="reportsMenu">
@@ -170,8 +175,6 @@
                         </ul>
                     </div>
                 </li>
-                <!-- END REPORTS MENU -->
-
                 <li class="nav-item mt-1"><a class="nav-link {{ request()->routeIs('admin.events*') ? 'active' : '' }}" href="{{ route('admin.events') }}"><i class="bi bi-calendar-check-fill"></i> Events</a></li>
             @endif
 
@@ -190,6 +193,13 @@
                 </li>
 
                 <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('parent.daily-logs') ? 'active' : '' }}" href="{{ route('parent.daily-logs') }}">
+                        <i class="bi bi-journal-text me-2"></i>
+                        <span>Aktiviti Harian</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('parent.communication') ? 'active' : '' }}" href="{{ route('parent.communication') }}">
                         <i class="bi bi-chat-dots-fill"></i> Chat
                     </a>
@@ -200,12 +210,13 @@
                         <i class="bi bi-credit-card-fill"></i> Payment
                     </a>
                 </li>
-            <li class="nav-item">
-    <a href="{{ route('parent.events') }}" class="nav-link {{ request()->routeIs('parent.events') ? 'active' : '' }}">
-        <i class="bi bi-calendar-event"></i>
-        <span>Events</span>
-    </a>
-</li>
+                
+                <li class="nav-item">
+                    <a href="{{ route('parent.events') }}" class="nav-link {{ request()->routeIs('parent.events') ? 'active' : '' }}">
+                        <i class="bi bi-calendar-event"></i>
+                        <span>Events</span>
+                    </a>
+                </li>
             @endif
 
         </ul>

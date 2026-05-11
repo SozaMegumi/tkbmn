@@ -11,6 +11,7 @@ use App\Models\Event;
 use App\Models\Transaction; 
 use App\Models\Payment;     
 use App\Models\Attendance;  
+use App\Models\AssessmentResult;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth; 
 use Carbon\Carbon;
@@ -98,18 +99,59 @@ class AdminController extends Controller
     }
 
     // ==========================================
-    // 9.0 REPORT MANAGEMENT (Process 9.0 in DFD)
+    // 9.0 REPORT MANAGEMENT (CRUCIAL UPDATE HERE)
     // ==========================================
     public function reports() { 
         $stats = [
             'total_income' => Transaction::where('type', 'income')->sum('amount'),
             'monthly_attendance_avg' => Attendance::whereMonth('date', now()->month)
-                                        ->where('status', 'Present')->count(),
+                                        ->where('status', 'Hadir')->count(),
             'enrollment_by_gender' => Student::selectRaw('gender, count(*) as total')
                                         ->groupBy('gender')->get()
         ];
 
-        return view('admin.reports', compact('stats')); 
+        // START OF CRUCIAL GRAPH DATA INJECTION
+        $academicLabels = ['Belum Ada Data'];
+        $academicValues = [0];
+
+        try {
+            // Attempt to get data assuming 'mastery_level' is the column name
+            $academicData = AssessmentResult::selectRaw('mastery_level, count(*) as total')
+                                ->groupBy('mastery_level')->orderBy('mastery_level')->get();
+            $academicLabels = $academicData->map(fn($item) => 'Tahap ' . $item->mastery_level)->toArray();
+            $academicValues = $academicData->pluck('total')->toArray();
+        } catch (\Exception $e) {
+            try {
+                // Fallback: If 'mastery_level' fails, try 'grade'
+                $academicData = AssessmentResult::selectRaw('grade as mastery_level, count(*) as total')
+                                    ->groupBy('grade')->orderBy('grade')->get();
+                $academicLabels = $academicData->map(fn($item) => 'Tahap ' . $item->mastery_level)->toArray();
+                $academicValues = $academicData->pluck('total')->toArray();
+            } catch (\Exception $e2) {
+                // If both fail (meaning you haven't created the database columns yet), do nothing. 
+                // The page will load successfully with the empty fallback data defined above.
+            }
+        }
+
+        $attendanceTrendLabels = [];
+        $attendanceTrendValues = [];
+        for($i = 6; $i >= 0; $i--) {
+            $date = Carbon::today('Asia/Kuala_Lumpur')->subDays($i)->toDateString();
+            $attendanceTrendLabels[] = Carbon::parse($date)->format('D, d M');
+            $attendanceTrendValues[] = Attendance::where('date', $date)->where('status', 'Hadir')->count();
+        }
+
+        $classEnrollment = Classroom::withCount('students')->get();
+        $classLabels = $classEnrollment->pluck('class_name')->toArray();
+        $classValues = $classEnrollment->pluck('students_count')->toArray();
+        // END OF CRUCIAL GRAPH DATA INJECTION
+
+        return view('admin.reports', compact(
+            'stats', 
+            'academicLabels', 'academicValues', 
+            'attendanceTrendLabels', 'attendanceTrendValues',
+            'classLabels', 'classValues'
+        )); 
     }
 
     /**
@@ -149,7 +191,6 @@ class AdminController extends Controller
             'labels' => $labels,
             'income' => $incomeData,
             'expense' => $expenseData,
-            // These two specific lines pass the breakdown to your frontend JS
             'expenseBreakdownLabels' => $expenseBreakdown->pluck('category'),
             'expenseBreakdownData' => $expenseBreakdown->pluck('total')
         ]);
