@@ -118,8 +118,9 @@ Route::middleware('auth:teacher')->prefix('teacher')->name('teacher.')->group(fu
     Route::get('/communication', [TeacherController::class, 'communication'])->name('communication');
     Route::post('/communication/send', [TeacherController::class, 'sendMessage'])->name('chat.send');
     
-    // --- THIS IS THE FIX ---
+    // Hafazan Routes
     Route::get('/hafazan', [TeacherController::class, 'hafazan'])->name('hafazan'); 
+    Route::post('/hafazan/bulk-store', [TeacherController::class, 'storeHafazanBulk'])->name('hafazan.bulk_store'); // <--- ADDED THIS LINE
 });
 
 
