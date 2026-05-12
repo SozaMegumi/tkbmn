@@ -1,164 +1,119 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container py-4">
-    <h3 class="fw-bold mb-4">Laporan Perkembangan Murid (Grading)</h3>
+<div class="container-fluid pb-5">
+    
+    <div class="mb-4">
+        <h3 class="fw-bold text-dark mb-1">Penilaian KSPK</h3>
+        <p class="text-muted small mb-0">Sistem Pentaksiran Tabika Kemas (Pengisian Berkelompok)</p>
+    </div>
 
-    <div class="card shadow-sm border-0 mb-4 p-3 bg-light">
-        <form method="GET" action="{{ route('teacher.grading') }}" class="row g-3 align-items-end">
-            <div class="col-md-9">
-                <label class="form-label fw-bold">Pilih Penggal (Select Term)</label>
-                <select name="assessment_id" class="form-select border-secondary" required>
-                    <option value="">-- Sila Pilih Penggal --</option>
+    @if (session('success'))
+        <div class="alert alert-success alert-dismissible fade show shadow-sm rounded-4" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+    @if (session('warning'))
+        <div class="alert alert-warning alert-dismissible fade show shadow-sm rounded-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ session('warning') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-4 bg-light bg-gradient rounded-4">
+            <form action="{{ route('teacher.grading') }}" method="GET" class="d-flex align-items-center gap-3 flex-wrap">
+                <label class="fw-bold text-dark mb-0 whitespace-nowrap"><i class="bi bi-journal-check text-primary me-2"></i> Sesi Pentaksiran:</label>
+                <select name="assessment_id" class="form-select border-0 shadow-sm w-auto min-w-200" onchange="this.form.submit()" required>
+                    <option value="" disabled {{ !$selectedAssessmentId ? 'selected' : '' }}>-- Sila Pilih Pentaksiran --</option>
                     @foreach($assessments as $assessment)
-                        @php $assId = $assessment->assessment_id ?? $assessment->id; @endphp
-                        <option value="{{ $assId }}" {{ $selectedAssessment == $assId ? 'selected' : '' }}>
-                            {{ $assessment->name ?? $assessment->assessment_name ?? $assessment->term_name ?? $assessment->title ?? 'Term ' . $assId }}
+                        <option value="{{ $assessment->id }}" {{ $selectedAssessmentId == $assessment->id ? 'selected' : '' }}>
+                            {{ $assessment->title }}
                         </option>
                     @endforeach
                 </select>
-            </div>
-            <div class="col-md-3">
-                <button type="submit" class="btn btn-secondary w-100 fw-bold"><i class="bi bi-people-fill"></i> Load Class List</button>
-            </div>
-        </form>
+                @if($selectedAssessmentId)
+                    <span class="badge bg-success rounded-pill px-3 py-2"><i class="bi bi-check-circle me-1"></i> Pentaksiran Aktif</span>
+                    <div class="ms-auto text-muted small"><i class="bi bi-info-circle text-primary"></i> Pilih TP 1 hingga TP 3.</div>
+                @endif
+            </form>
+        </div>
     </div>
 
-    @if(session('success'))
-        <div class="alert alert-success fw-bold shadow-sm"><i class="bi bi-check-circle-fill"></i> {{ session('success') }}</div>
-    @endif
-
-    @if(!$selectedAssessment)
-        <div class="alert alert-secondary text-center py-5 shadow-sm border-0">
-            <i class="bi bi-calendar3 fs-1 d-block mb-3 text-muted"></i>
-            <h5>Sila pilih Penggal di atas</h5>
-            <p class="text-muted mb-0">Senarai kelas anda akan dipaparkan selepas penggal dipilih.</p>
+    @if($selectedAssessmentId)
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+            <h5 class="fw-bold text-dark mb-0"><i class="bi bi-table text-primary me-2"></i> Borang Pentaksiran Kelas</h5>
         </div>
-
-    @elseif($selectedAssessment && !$selectedStudentId)
-        <div class="card shadow-sm border-0 border-top border-primary border-4">
-            <div class="card-header bg-white pt-3 pb-2">
-                <h5 class="fw-bold text-primary mb-0"><i class="bi bi-person-lines-fill"></i> Senarai Nama Kelas (Class Roster)</h5>
-            </div>
-            <div class="card-body p-0">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="ps-4" style="width: 50px;">#</th>
-                            <th>Nama Murid</th>
-                            <th>No. MyKid</th>
-                            <th>Jantina</th>
-                            <th class="text-end pe-4">Tindakan</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($students as $index => $student)
-                            <tr>
-                                <td class="ps-4 fw-bold text-muted">{{ $index + 1 }}</td>
-                                <td class="fw-bold text-uppercase">{{ $student->student_name }}</td>
-                                <td>{{ $student->mykid ?? '-' }}</td>
-                                <td>{{ $student->gender ?? '-' }}</td>
-                                <td class="text-end pe-4">
-                                    <a href="{{ route('teacher.grading', ['assessment_id' => $selectedAssessment, 'student_id' => $student->student_id]) }}" class="btn btn-sm btn-primary fw-bold px-3">
-                                        <i class="bi bi-pencil-square"></i> Isi Borang
-                                    </a>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-    @elseif($selectedAssessment && $selectedStudentId)
-        <div class="d-flex justify-content-between align-items-end mb-3">
-            <h5 class="fw-bold text-primary mb-0"><i class="bi bi-file-earmark-text"></i> Borang Penilaian Murid</h5>
-            
-            <a href="{{ route('teacher.grading', ['assessment_id' => $selectedAssessment]) }}" class="btn btn-outline-secondary btn-sm fw-bold shadow-sm">
-                <i class="bi bi-arrow-left"></i> Kembali ke Senarai Kelas
-            </a>
-        </div>
-
-        <div class="card shadow-sm border-0 mb-4 border-top border-success border-4">
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <table class="table table-sm table-borderless mb-0">
-                            <tr><th style="width: 120px;">Nama Murid</th><td>: <span class="fw-bold text-uppercase">{{ $selectedStudent->student_name }}</span></td></tr>
-                            <tr><th>No. MyKid</th><td>: {{ $selectedStudent->mykid ?? '-' }}</td></tr>
-                        </table>
-                    </div>
-                    <div class="col-md-6">
-                        <table class="table table-sm table-borderless mb-0">
-                            <tr><th style="width: 120px;">Kelas</th><td>: <span class="text-uppercase">{{ $selectedStudent->classroom->class_name ?? 'TABIKA KEMAS' }}</span></td></tr>
-                            <tr><th>Tarikh</th><td>: {{ \Carbon\Carbon::now()->format('d F Y') }}</td></tr>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="alert alert-info py-2 mb-3 shadow-sm border-0">
-            <strong class="d-block mb-1"><i class="bi bi-info-circle"></i> Panduan Tahap Penguasaan (Mastery Levels):</strong>
-            <div class="d-flex flex-wrap gap-4" style="font-size: 0.9rem;">
-                <div><span class="badge bg-danger">Tahap 1</span> Belum Menguasai (Perlu bimbingan)</div>
-                <div><span class="badge bg-warning text-dark">Tahap 2</span> Sedang Maju (Boleh buat dengan sikit bimbingan)</div>
-                <div><span class="badge bg-success">Tahap 3</span> Telah Menguasai (Boleh buat dengan baik/konsisten)</div>
-            </div>
-        </div>
-
-        <div class="card shadow-sm border-0 mb-5">
+        <div class="card-body p-4">
             <form action="{{ route('teacher.grading.store') }}" method="POST">
                 @csrf
-                <input type="hidden" name="student_id" value="{{ $selectedStudentId }}">
-                <input type="hidden" name="assessment_id" value="{{ $selectedAssessment }}">
-
-                <div class="card-body p-0">
-                    <table class="table table-bordered mb-0 align-middle">
-                        <thead class="table-light">
+                <input type="hidden" name="assessment_id" value="{{ $selectedAssessmentId }}">
+                
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle table-sm" style="min-width: 1200px;">
+                        <thead class="table-light text-center align-middle" style="font-size: 0.75rem;">
                             <tr>
-                                <th style="width: 20%;">KOMPONEN</th>
-                                <th style="width: 25%;">KEMAHIRAN</th>
-                                <th style="width: 20%;">TAFSIRAN (Tahap)</th>
-                                <th>ULASAN GURU (Catatan)</th>
+                                <th rowspan="2" width="15%" class="text-start ps-3 align-middle text-uppercase">NAMA MURID</th>
+                                <th colspan="{{ $subjects->count() }}" class="bg-primary bg-opacity-10 text-primary fw-bold text-uppercase">
+                                    TUNJANG KOMPONEN KSPK (TAHAP PENGUASAAN)
+                                </th>
+                                <th rowspan="2" width="18%" class="align-middle text-uppercase">ULASAN GURU</th>
+                            </tr>
+                            <tr>
+                                @foreach($subjects as $subject)
+                                    <th width="6%" title="{{ $subject->subject_name }}" class="text-uppercase text-secondary">
+                                        {{ $subject->komponen ?? $subject->subject_name }}
+                                    </th>
+                                @endforeach
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($groupedSubjects as $komponen => $subjects)
-                                @foreach($subjects as $index => $subject)
-                                    @php $result = $results->get($subject->subject_id); @endphp
-                                    <tr>
-                                        @if($index === 0)
-                                            <td rowspan="{{ count($subjects) }}" class="fw-bold text-center bg-light text-uppercase" style="vertical-align: middle;">
-                                                {{ $komponen }}
-                                            </td>
-                                        @endif
-                                        
-                                        <td class="fw-bold text-secondary" style="font-size: 0.95rem;">{{ $subject->subject_name }}</td>
-                                        
-                                        <td>
-                                            <select name="grades[{{ $subject->subject_id }}][mastery_level]" class="form-select form-select-sm border-secondary shadow-none">
-                                                <option value="">-- Pilih Tahap --</option>
-                                                <option value="1" {{ ($result->mastery_level ?? '') == 1 ? 'selected' : '' }}>Tahap 1</option>
-                                                <option value="2" {{ ($result->mastery_level ?? '') == 2 ? 'selected' : '' }}>Tahap 2</option>
-                                                <option value="3" {{ ($result->mastery_level ?? '') == 3 ? 'selected' : '' }}>Tahap 3</option>
-                                            </select>
-                                        </td>
-
-                                        <td>
-                                            <input type="text" name="grades[{{ $subject->subject_id }}][remarks]" class="form-control form-control-sm shadow-none" placeholder="Ulasan guru (pilihan)..." value="{{ $result->teacher_remarks ?? '' }}">
-                                        </td>
-                                    </tr>
+                            @forelse($students as $student)
+                            <tr>
+                                <td class="fw-bold text-primary ps-3" style="font-size: 0.85rem;">{{ $student->student_name }}</td>
+                                
+                                @foreach($subjects as $subject)
+                                    @php
+                                        $currentGrade = $results[$student->student_id][$subject->subject_id] ?? '';
+                                    @endphp
+                                    <td class="p-1">
+                                        <select name="grades[{{ $student->student_id }}][{{ $subject->subject_id }}]" class="form-select form-select-sm border-secondary-subtle fw-bold text-center" style="font-size: 0.8rem;">
+                                            <option value="" class="text-muted">-</option>
+                                            <option value="1" class="text-danger" {{ $currentGrade == '1' ? 'selected' : '' }}>TP 1</option>
+                                            <option value="2" class="text-warning text-dark" {{ $currentGrade == '2' ? 'selected' : '' }}>TP 2</option>
+                                            <option value="3" class="text-success" {{ $currentGrade == '3' ? 'selected' : '' }}>TP 3</option>
+                                        </select>
+                                    </td>
                                 @endforeach
-                            @endforeach
+                                
+                                <td class="p-1">
+                                    <input type="text" name="remarks[{{ $student->student_id }}]" class="form-control form-control-sm border-secondary-subtle" style="font-size: 0.8rem;" placeholder="Catatan/Ulasan..." value="{{ $teacherRemarks[$student->student_id] ?? '' }}">
+                                </td>
+                            </tr>
+                            @empty
+                            <tr><td colspan="{{ $subjects->count() + 2 }}" class="text-center py-4 text-muted">Tiada pelajar didaftarkan di dalam kelas anda.</td></tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
-                <div class="card-footer bg-white text-end py-3">
-                    <button type="submit" class="btn btn-success fw-bold px-5 shadow-sm"><i class="bi bi-save"></i> Simpan Laporan (Save)</button>
+
+                <div class="text-end mt-4">
+                    <button type="submit" class="btn btn-success px-5 rounded-pill shadow-sm fw-bold">
+                        <i class="bi bi-save2-fill me-2"></i> Simpan Semua Pentaksiran
+                    </button>
                 </div>
             </form>
         </div>
+    </div>
+    @else
+    <div class="text-center p-5 text-muted bg-white rounded-4 shadow-sm border border-light-subtle">
+        <i class="bi bi-arrow-up-circle fs-1 d-block mb-3 text-primary opacity-50"></i>
+        <h5 class="fw-bold">Sila Pilih Pentaksiran</h5>
+        <p>Pilih sesi pentaksiran di atas untuk mula memasukkan gred KSPK murid secara berkelompok.</p>
+    </div>
     @endif
+
 </div>
 @endsection

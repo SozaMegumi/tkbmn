@@ -182,6 +182,11 @@
                 <li class="nav-item"><a class="nav-link {{ request()->routeIs('teacher.dashboard') ? 'active' : '' }}" href="{{ route('teacher.dashboard') }}"><i class="bi bi-grid-fill"></i> Dashboard</a></li>
                 <li class="nav-item"><a class="nav-link {{ request()->routeIs('teacher.attendance*') ? 'active' : '' }}" href="{{ route('teacher.attendance') }}"><i class="bi bi-check-circle-fill"></i> Attendance</a></li>
                 <li class="nav-item"><a class="nav-link {{ request()->routeIs('teacher.grading*') ? 'active' : '' }}" href="{{ route('teacher.grading') }}"><i class="bi bi-mortarboard-fill"></i> Grading</a></li>
+                <li class="nav-item">
+    <a class="nav-link {{ request()->routeIs('teacher.hafazan*') ? 'active' : '' }}" href="{{ route('teacher.hafazan') }}">
+        <i class="bi bi-book-half"></i> Rekod Hafazan
+    </a>
+</li>
                 <li class="nav-item"><a class="nav-link {{ request()->routeIs('teacher.communication*') ? 'active' : '' }}" href="{{ route('teacher.communication') }}"><i class="bi bi-chat-quote-fill"></i> Chat</a></li>
             @endif
 

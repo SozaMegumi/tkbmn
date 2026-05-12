@@ -10,13 +10,13 @@ use App\Models\Classroom;
 use App\Models\Message;   
 use App\Models\Guardian;  
 use App\Models\Teacher;
-// --- NEW MODELS FOR LOGS & GRADING ---
 use App\Models\DailyLog;
 use App\Models\Subject;
 use App\Models\Assessment;
 use App\Models\AssessmentResult;
+use App\Models\HafazanRecord; 
 use Carbon\Carbon;
-use Barryvdh\DomPDF\Facade\Pdf; // <-- NEW: Added PDF package for Teacher printing
+use Barryvdh\DomPDF\Facade\Pdf; 
 
 class TeacherController extends Controller
 {
@@ -36,8 +36,8 @@ class TeacherController extends Controller
             $attendanceMarked = false;
             $unreadMessages = 0;
 
-            // FIX: Use assigned_class_id to find the classroom
-            $classroom = Classroom::where('class_id', $teacher->assigned_class_id)->first();
+            // FIX: Find the classroom where teacher_id matches this teacher
+            $classroom = Classroom::where('teacher_id', $teacher->teacher_id)->first();
 
             if ($classroom) {
                 $assignedClass = $classroom->class_name;
@@ -69,7 +69,7 @@ class TeacherController extends Controller
     }
 
     // ==========================================
-    // ATTENDANCE MANAGEMENT 
+    // ATTENDANCE
     // ==========================================
     public function attendance(Request $request) {
         $teacher = Auth::guard('teacher')->user();
@@ -80,8 +80,12 @@ class TeacherController extends Controller
         $selectedDate = $request->get('attendance_date', Carbon::today('Asia/Kuala_Lumpur')->toDateString());
         $students = [];
 
-        if ($request->has('class_id') || $teacher->assigned_class_id) {
-            $classId = $request->has('class_id') ? $request->class_id : $teacher->assigned_class_id;
+        // FIX: Grab the class ID directly from the Classroom table
+        $classroom = Classroom::where('teacher_id', $teacher->teacher_id)->first();
+        $teacherClassId = $classroom ? $classroom->class_id : null;
+
+        if ($request->has('class_id') || $teacherClassId) {
+            $classId = $request->has('class_id') ? $request->class_id : $teacherClassId;
             $selectedClass = Classroom::find($classId);
 
             $students = Student::where('class_id', $classId)
@@ -106,14 +110,12 @@ class TeacherController extends Controller
         ]);
 
         foreach ($request->attendances as $studentId => $data) {
-            // Find existing record to preserve old attachments if no new one is uploaded
             $attendance = Attendance::where('student_id', $studentId)
                                     ->where('date', $request->attendance_date)
                                     ->first();
 
             $attachmentPath = $attendance ? $attendance->attachment : null;
 
-            // Handle file upload if a new MC/Letter is attached
             if (isset($data['attachment']) && $data['attachment']->isValid()) {
                 $attachmentPath = $data['attachment']->store('attendances/mc_letters', 'public');
             }
@@ -132,21 +134,19 @@ class TeacherController extends Controller
         return back()->with('success', 'Attendance & Documents updated successfully!');
     }
 
-    // ==========================================
-    // NEW: PDF Export for Attendance (FIXED)
-    // ==========================================
     public function printAttendance(Request $request) {
         $teacher = Auth::guard('teacher')->user();
         if (!$teacher) return redirect()->route('login');
 
         $date = $request->get('date', Carbon::today('Asia/Kuala_Lumpur')->toDateString());
         
-        // FIX: Grab the class_id from the URL parameter
-        $classId = $request->get('class_id', $teacher->assigned_class_id);
+        $classroom = Classroom::where('teacher_id', $teacher->teacher_id)->first();
+        $teacherClassId = $classroom ? $classroom->class_id : null;
+        $classId = $request->get('class_id', $teacherClassId);
         
-        $classroom = Classroom::find($classId);
+        $selectedClassroom = Classroom::find($classId);
 
-        if (!$classroom) {
+        if (!$selectedClassroom) {
             return back()->with('error', 'Sila pastikan kelas telah dipilih sebelum mencetak PDF.');
         }
 
@@ -156,20 +156,24 @@ class TeacherController extends Controller
             return $student;
         });
 
-        $pdf = Pdf::loadView('reports.attendance-report', compact('students', 'date', 'classroom', 'teacher'));
-        return $pdf->stream('Kehadiran_'.$classroom->class_name.'_'.$date.'.pdf');
+        $pdf = Pdf::loadView('reports.attendance-report', compact('students', 'date', 'selectedClassroom', 'teacher'));
+        return $pdf->stream('Kehadiran_'.$selectedClassroom->class_name.'_'.$date.'.pdf');
     }
 
     // ==========================================
-    // DAILY LOGS (KINDERGARTEN SPECIFIC)
+    // DAILY LOGS
     // ==========================================
     public function dailyLogs(Request $request) {
         $teacher = Auth::guard('teacher')->user();
         if (!$teacher) return redirect()->route('login');
 
-        $classId = $teacher->assigned_class_id;
+        // FIX: Find the correct class for this teacher
+        $classroom = Classroom::where('teacher_id', $teacher->teacher_id)->first();
+        $classId = $classroom ? $classroom->class_id : null;
+        
         $date = $request->date ?? Carbon::today('Asia/Kuala_Lumpur')->toDateString();
-        $students = Student::where('class_id', $classId)->get();
+        $students = $classId ? Student::where('class_id', $classId)->get() : collect();
+        
         $logs = DailyLog::whereIn('student_id', $students->pluck('student_id'))
                         ->where('date', $date)
                         ->get()
@@ -199,45 +203,59 @@ class TeacherController extends Controller
     }
 
     // ==========================================
-    // KSPK GRADING (BY STUDENT)
+    // KSPK GRADING
     // ==========================================
     public function grading(Request $request) {
         $teacher = Auth::guard('teacher')->user();
         if (!$teacher) return redirect()->route('login');
 
-        $classId = $teacher->assigned_class_id;
-        $students = Student::where('class_id', $classId)->get();
+        // FIX: Find the correct class for this teacher
+        $classroom = Classroom::where('teacher_id', $teacher->teacher_id)->first();
+        $classId = $classroom ? $classroom->class_id : null;
+        
+        $students = $classId ? Student::where('class_id', $classId)->orderBy('student_name', 'asc')->get() : collect();
+        
         $assessments = Assessment::all(); 
-        $groupedSubjects = Subject::all()->groupBy('komponen');
+        $subjects = Subject::all(); 
         
-        $selectedStudentId = $request->student_id;
-        $selectedAssessment = $request->assessment_id;
+        $selectedAssessmentId = $request->has('assessment_id') ? $request->assessment_id : null;
         
-        $selectedStudent = null;
-        $results = collect();
+        $results = [];
+        $teacherRemarks = [];
 
-        if ($selectedStudentId && $selectedAssessment) {
-            $selectedStudent = Student::with('classroom')->where('student_id', $selectedStudentId)->first();
-            $results = AssessmentResult::where('student_id', $selectedStudentId)
-                ->where('assessment_id', $selectedAssessment)
-                ->get()
-                ->keyBy('subject_id');
+        if ($selectedAssessmentId) {
+            $allResults = AssessmentResult::where('assessment_id', $selectedAssessmentId)
+                ->whereIn('student_id', $students->pluck('student_id'))
+                ->get();
+                
+            foreach ($allResults as $res) {
+                $results[$res->student_id][$res->subject_id] = $res->mastery_level;
+                
+                if ($res->teacher_remarks) {
+                    $teacherRemarks[$res->student_id] = $res->teacher_remarks;
+                }
+            }
         }
 
         return view('teacher.grading', compact(
-            'students', 'groupedSubjects', 'assessments', 
-            'selectedStudentId', 'selectedAssessment', 'selectedStudent', 'results', 'teacher'
+            'students', 'subjects', 'assessments', 'selectedAssessmentId', 'results', 'teacherRemarks', 'teacher'
         ));
     }
 
     public function storeGrade(Request $request) {
-        $student_id = $request->student_id;
-        $assessment_id = $request->assessment_id;
-        $grades = $request->grades; 
+        $request->validate([
+            'assessment_id' => 'required|exists:assessments,id',
+            'grades' => 'required|array'
+        ]);
 
-        if($grades) {
-            foreach ($grades as $subject_id => $data) {
-                if (!empty($data['mastery_level'])) { 
+        $assessment_id = $request->assessment_id;
+        $count = 0;
+
+        foreach ($request->grades as $student_id => $studentGrades) {
+            $remark = $request->remarks[$student_id] ?? null;
+
+            foreach ($studentGrades as $subject_id => $mastery_level) {
+                if (!empty($mastery_level)) { 
                     AssessmentResult::updateOrCreate(
                         [
                             'student_id' => $student_id, 
@@ -245,14 +263,20 @@ class TeacherController extends Controller
                             'assessment_id' => $assessment_id
                         ],
                         [
-                            'mastery_level' => $data['mastery_level'],
-                            'teacher_remarks' => $data['remarks'] ?? null,
+                            'mastery_level' => $mastery_level,
+                            'teacher_remarks' => $remark,
                         ]
                     );
+                    $count++;
                 }
             }
         }
-        return back()->with('success', 'Student Report Card saved successfully!');
+        
+        if ($count > 0) {
+            return back()->with('success', 'Penilaian KSPK berjaya disimpan secara berkelompok!');
+        } else {
+            return back()->with('warning', 'Tiada penilaian disimpan. Sila pastikan sekurang-kurangnya satu gred dipilih.');
+        }
     }
 
     public function reportCards() {
@@ -266,7 +290,11 @@ class TeacherController extends Controller
     public function printReportCards($assessment_id) {
         $teacher = Auth::guard('teacher')->user();
         $assessment = Assessment::findOrFail($assessment_id);
-        $students = Student::where('class_id', $teacher->assigned_class_id)->get();
+        
+        // FIX: Grab the students using the new classroom link
+        $classroom = Classroom::where('teacher_id', $teacher->teacher_id)->first();
+        $classId = $classroom ? $classroom->class_id : null;
+        $students = $classId ? Student::where('class_id', $classId)->get() : collect();
 
         $allResults = AssessmentResult::with('subject')
             ->whereIn('student_id', $students->pluck('student_id'))
@@ -279,7 +307,90 @@ class TeacherController extends Controller
     }
 
     // ==========================================
-    // COMMUNICATION (Chat)
+    // HAFAZAN MANAGEMENT
+    // ==========================================
+    public function hafazan() {
+        $teacher = Auth::guard('teacher')->user();
+        if (!$teacher) return redirect()->route('login');
+        
+        $teacherId = $teacher->teacher_id;
+        
+        $classIds = Classroom::where('teacher_id', $teacherId)->pluck('class_id');
+        $students = Student::whereIn('class_id', $classIds)->orderBy('student_name')->get();
+        
+        $records = HafazanRecord::with(['student', 'evaluator'])
+            ->whereIn('student_id', $students->pluck('student_id'))
+            ->orderBy('date_recorded', 'desc')
+            ->get();
+            
+        return view('teacher.hafazan', compact('students', 'records'));
+    }
+
+    public function storeHafazan(Request $request) {
+        $request->validate([
+            'student_id'    => 'required|exists:students,student_id',
+            'surah_name'    => 'required|string|max:255',
+            'juz_number'    => 'nullable|integer|min:1|max:30',
+            'verse_range'   => 'nullable|string|max:255',
+            'fluency_level' => 'required|string', 
+            'date'          => 'required|date'
+        ]);
+
+        HafazanRecord::create([
+            'student_id'    => $request->student_id,
+            'teacher_id'    => Auth::guard('teacher')->user()->teacher_id,
+            'surah_name'    => $request->surah_name,
+            'juz_number'    => $request->juz_number,
+            'verse_range'   => $request->verse_range,
+            'fluency_level' => $request->fluency_level,
+            'tajweed_notes' => $request->tajweed_notes,
+            'date_recorded' => $request->date,
+        ]);
+
+        return back()->with('success', 'Rekod Hafazan berjaya disimpan!');
+    }
+
+    public function storeBulkHafazan(Request $request) {
+        $request->validate([
+            'date' => 'required|date',
+            'records' => 'required|array'
+        ]);
+
+        $teacherId = Auth::guard('teacher')->user()->teacher_id;
+        $date = $request->date;
+        $count = 0;
+
+        foreach ($request->records as $studentId => $data) {
+            if (!empty($data['surah_name'])) {
+                HafazanRecord::create([
+                    'student_id'    => $studentId,
+                    'teacher_id'    => $teacherId,
+                    'surah_name'    => $data['surah_name'],
+                    'juz_number'    => $data['juz_number'] ?? null,
+                    'verse_range'   => $data['verse_range'] ?? null,
+                    'fluency_level' => $data['fluency_level'],
+                    'tajweed_notes' => $data['tajweed_notes'] ?? null,
+                    'date_recorded' => $date
+                ]);
+                $count++;
+            }
+        }
+
+        if ($count > 0) {
+            return back()->with('success', "$count rekod hafazan murid berjaya disimpan secara berkelompok!");
+        } else {
+            return back()->with('warning', 'Tiada rekod disimpan. Sila pastikan sekurang-kurangnya satu Nama Surah diisi.');
+        }
+    }
+
+    public function deleteHafazan($id) {
+        $record = HafazanRecord::findOrFail($id);
+        $record->delete(); 
+        return back()->with('success', 'Rekod berjaya dipadam.');
+    }
+
+    // ==========================================
+    // COMMUNICATION
     // ==========================================
     public function communication(Request $request) {
         $teacher = Auth::guard('teacher')->user(); 
@@ -308,14 +419,11 @@ class TeacherController extends Controller
         return view('teacher.communication', compact('parents', 'activeParent', 'messages'));
     }
 
-    // ==========================================
-    // SEND MESSAGE (Updated for Attachments)
-    // ==========================================
     public function sendMessage(Request $request) {
         $request->validate([
             'receiver_id' => 'required',
             'message'     => 'nullable|string',
-            'attachment'  => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048' // Max 2MB
+            'attachment'  => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048'
         ]);
 
         $teacher = Auth::guard('teacher')->user(); 
@@ -325,7 +433,6 @@ class TeacherController extends Controller
             $attachmentPath = $request->file('attachment')->store('chat_attachments', 'public');
         }
 
-        // Prevent sending empty content
         if (!$request->message && !$attachmentPath) {
             return back()->with('error', 'Sila masukkan mesej atau muat naik fail.');
         }

@@ -2,24 +2,28 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Classroom extends Model
 {
-    // 1. Define Primary Key (Matches your Database)
+    use HasFactory;
+
     protected $primaryKey = 'class_id';
 
-    // 2. Define Fillable Columns
     protected $fillable = [
         'class_name', 
-        'capacity'
+        'capacity',
+        'teacher_id' 
     ];
 
-    public function teacher() {
-        return $this->hasOne(Teacher::class, 'assigned_class_id', 'class_id');
+    public function teacher()
+    {
+        return $this->belongsTo(Teacher::class, 'teacher_id', 'teacher_id');
     }
 
-    public function students() {
+    public function students()
+    {
         return $this->hasMany(Student::class, 'class_id', 'class_id');
     }
 }

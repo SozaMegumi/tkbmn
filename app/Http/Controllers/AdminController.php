@@ -15,8 +15,6 @@ use App\Models\AssessmentResult;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth; 
 use Carbon\Carbon;
-
-// The Spatie Google Calendar package
 use Spatie\GoogleCalendar\Event as GoogleEvent; 
 
 class AdminController extends Controller
@@ -76,7 +74,6 @@ class AdminController extends Controller
         foreach($classrooms as $class) {
             $total = \App\Models\Student::where('class_id', $class->class_id)->count();
             
-            // Count attendance types
             $present = \App\Models\Attendance::where('class_id', $class->class_id)
                         ->where('date', $date)->where('status', 'Hadir')->count();
                         
@@ -128,8 +125,6 @@ class AdminController extends Controller
                 $academicLabels = $academicData->map(fn($item) => 'Tahap ' . $item->mastery_level)->toArray();
                 $academicValues = $academicData->pluck('total')->toArray();
             } catch (\Exception $e2) {
-                // If both fail (meaning you haven't created the database columns yet), do nothing. 
-                // The page will load successfully with the empty fallback data defined above.
             }
         }
 
@@ -144,7 +139,6 @@ class AdminController extends Controller
         $classEnrollment = Classroom::withCount('students')->get();
         $classLabels = $classEnrollment->pluck('class_name')->toArray();
         $classValues = $classEnrollment->pluck('students_count')->toArray();
-        // END OF CRUCIAL GRAPH DATA INJECTION
 
         return view('admin.reports', compact(
             'stats', 
@@ -163,7 +157,6 @@ class AdminController extends Controller
         $incomeData = [];
         $expenseData = [];
 
-        // 1. Fetch Bar Chart Data (Cash Flow)
         for ($i = $monthsCount - 1; $i >= 0; $i--) {
             $date = now()->subMonths($i);
             $labels[] = $date->format('M');
@@ -179,7 +172,6 @@ class AdminController extends Controller
                 ->sum('amount');
         }
 
-        // 2. Fetch Doughnut Chart Data (Expense Breakdown for Current Month)
         $expenseBreakdown = Transaction::where('type', 'expense')
             ->whereMonth('date', now()->month)
             ->whereYear('date', now()->year)
@@ -200,7 +192,6 @@ class AdminController extends Controller
     // 9.0 REPORT MANAGEMENT FUNCTIONS (PBMT)
     // ==========================================
 
-    // --- 1. Takwim Sesi Persekolahan ---
     public function reportTakwim() {
         $history = \App\Models\PbmtReport::where('report_type', 'takwim')->orderBy('created_at', 'desc')->get();
         return view('admin.reports.takwim', compact('history'));
@@ -256,8 +247,6 @@ class AdminController extends Controller
         return redirect()->back()->with('success', 'Rekod takwim berjaya dipadam.');
     }
 
-
-    // --- 2. Unjuran Permohonan ---
     public function reportUnjuran() {
         $history = \App\Models\PbmtReport::where('report_type', 'unjuran')->orderBy('created_at', 'desc')->get();
         return view('admin.reports.unjuran', compact('history'));
@@ -329,8 +318,6 @@ class AdminController extends Controller
         return redirect()->back()->with('success', 'Rekod Unjuran berjaya dipadam.');
     }
 
-
-    // --- 3. Rumusan Berkelompok ---
     public function reportRumusan() {
         $history = \App\Models\PbmtReport::where('report_type', 'berkelompok')->orderBy('created_at', 'desc')->get();
         return view('admin.reports.berkelompok', compact('history'));
@@ -342,10 +329,9 @@ class AdminController extends Controller
         $rows = [];
         $jumlah_keseluruhan = 0;
 
-        // Loop through the 5 rows submitted by the form
         if($request->nama_tabika) {
             foreach($request->nama_tabika as $index => $nama) {
-                if(!empty($nama)) { // Only process rows where a Name was actually typed
+                if(!empty($nama)) { 
                     $jumlah = (float)($request->jumlah[$index] ?? 0);
                     $jumlah_keseluruhan += $jumlah;
 
@@ -395,8 +381,6 @@ class AdminController extends Controller
         return redirect()->back()->with('success', 'Rekod Rumusan berjaya dipadam.');
     }
 
-
-    // --- 4. Prestasi Perbelanjaan ---
     public function reportPrestasi() {
         $history = \App\Models\PbmtReport::where('report_type', 'prestasi')->orderBy('created_at', 'desc')->get();
         return view('admin.reports.prestasi', compact('history'));
@@ -413,7 +397,6 @@ class AdminController extends Controller
 
         $rows = [];
 
-        // Loop through all 9 rows (6 months + 3 extra KEMAS categories)
         if($request->row_labels) {
             foreach($request->row_labels as $index => $label) {
                 $kanak_p = (int)($request->kanak_p[$index] ?? 0);
@@ -487,7 +470,6 @@ class AdminController extends Controller
         $report->delete();
         return redirect()->back()->with('success', 'Rekod Prestasi berjaya dipadam.');
     }
-
 
     // ==========================================
     // 1.0 USER ACCOUNTS (Teachers & Parents)
@@ -565,16 +547,14 @@ class AdminController extends Controller
         return back()->with('success', 'User account deleted successfully.');
     }
 
-
     // ==========================================
-    // 3.0 & 4.0 STUDENT ENROLMENT
+    // 3.0 & 4.0 STUDENT ENROLMENT & CLASS MGMT
     // ==========================================
     public function enrolment() {
         return view('admin.enrolment', [
-            'classesWithStudents' => Classroom::with(['students.parent'])->get(),
-            'unassignedStudents'  => Student::whereNull('class_id')->with('parent')->get(),
-            'parents'             => Guardian::all(),
-            'classes'             => Classroom::all()
+            'students' => Student::with('parent')->orderBy('student_name', 'asc')->get(),
+            'parents'  => Guardian::all(),
+            'classes'  => Classroom::all() 
         ]);
     }
     
@@ -584,6 +564,7 @@ class AdminController extends Controller
             'mykid'        => 'required|unique:students,mykid',
             'parent_id'    => 'required|exists:guardians,parent_id',
             'dob'          => 'required|date',
+            'class_id'     => 'nullable|exists:classrooms,class_id'
         ]);
 
         Student::create([
@@ -601,13 +582,42 @@ class AdminController extends Controller
 
         return back()->with('success', 'Student Enrolled Successfully!');
     }
+    
+    public function updateStudent(Request $request, int $id) {
+        $student = Student::findOrFail($id);
+        $student->update($request->all());
+        return back()->with('success', 'Student details updated successfully!');
+    }
+
+    public function deleteStudent(int $id) {
+        $student = Student::findOrFail($id);
+        $student->delete();
+        return back()->with('success', 'Student record deleted successfully.');
+    }
+
+    public function updateClassTeacher(Request $request, $id) {
+        $request->validate([
+            'teacher_id' => 'nullable|exists:teachers,teacher_id'
+        ]);
+
+        $classroom = Classroom::findOrFail($id);
+        
+        $classroom->update([
+            'teacher_id' => $request->teacher_id
+        ]);
+
+        $teacherName = $request->teacher_id 
+            ? Teacher::find($request->teacher_id)->full_name 
+            : 'None';
+
+        return back()->with('success', "Class " . $classroom->class_name . " is now assigned to Teacher: " . $teacherName);
+    }
 
 
     // ==========================================
     // 5.0 ASSESSMENT SETUP (Pengurusan Pentaksiran)
     // ==========================================
     public function exams() {
-        // Fetch all assessment periods, newest first
         $assessments = \App\Models\Assessment::orderBy('created_at', 'desc')->get();
         return view('admin.exams', compact('assessments')); 
     }
@@ -651,21 +661,16 @@ class AdminController extends Controller
     // 8.0 FINANCE (Process 8.0 in DFD)
     // ==========================================
     public function finance() {
-        // 1. Calculate standard totals (Note: using lowercase 'income' to match your store function)
         $totalIncome = Transaction::where('type', 'income')->sum('amount');
         $totalExpense = Transaction::where('type', 'expense')->sum('amount');
         $currentBalance = $totalIncome - $totalExpense;
         
-        // 2. Fetch pending payments for Admin verification
         $pendingPayments = Payment::where('status', 'Pending')->with('student')->get();
         
-        // 3. Fetch transaction history
         $transactions = Transaction::orderBy('date', 'desc')->get();
 
-        // 4. NEW: Fetch Students grouped by Class to track Outstanding Balances
         $classrooms = Classroom::with(['students' => function($query) {
             $query->with(['payments' => function($q) {
-                // Only pull payments that are Unpaid or currently Pending verification
                 $q->whereIn('status', ['Unpaid', 'Pending']);
             }]);
         }])->get();
@@ -676,25 +681,23 @@ class AdminController extends Controller
             'currentBalance', 
             'transactions', 
             'pendingPayments', 
-            'classrooms' // This makes the accordion table work!
+            'classrooms' 
         ));
     }
     
     public function generateMonthlyBills() {
-        // Fetch all active students
         $students = Student::where('status', 'active')->get(); 
-        $currentMonth = now()->format('F Y'); // e.g., "May 2026"
+        $currentMonth = now()->format('F Y'); 
         $count = 0;
 
         foreach($students as $student) {
-            // Check if we already generated a bill for this specific month to prevent duplicates
-            $alreadyBilled = Payment::where('student_id', $student->student_id) // adjust 'student_id' if your DB uses 'id'
+            $alreadyBilled = Payment::where('student_id', $student->student_id) 
                                     ->where('admin_remarks', "Yuran Bulanan - $currentMonth")
                                     ->exists();
 
             if(!$alreadyBilled) {
                 Payment::create([
-                    'student_id' => $student->student_id, // adjust if primary key is 'id'
+                    'student_id' => $student->student_id, 
                     'title' => 'Yuran Bulanan',
                     'amount' => 150.00,
                     'status' => 'Unpaid',
@@ -711,32 +714,22 @@ class AdminController extends Controller
         }
     }
     
-    // --- THIS IS THE CRITICAL FUNCTION THAT WAS UPDATED ---
     public function storeTransaction(Request $request) {
-        // 1. Validate the form inputs, including the file
         $request->validate([
             'type' => 'required|in:income,expense',
             'amount' => 'required|numeric|min:0',
             'date' => 'required|date',
             'category' => 'required',
-            // Allow files, make it optional (nullable), restrict to 2MB images/pdfs
             'receipt_file' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048' 
         ]);
 
-        // 2. Grab all the text data from the form
         $data = $request->except('receipt_file');
 
-        // 3. Handle the File Upload
         if ($request->hasFile('receipt_file')) {
-            // Securely store the file in storage/app/public/receipts/transactions
-            // and get the file path back
             $path = $request->file('receipt_file')->store('receipts/transactions', 'public');
-            
-            // Add the file path to our database save array
             $data['receipt_path'] = $path;
         }
 
-        // 4. Save to Database
         Transaction::create($data);
         
         return back()->with('success', 'Transaction Recorded Successfully!');

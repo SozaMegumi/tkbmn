@@ -4,12 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class HafazanRecord extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
+    protected $table = 'hafazan_records';
     protected $primaryKey = 'hafazan_id';
 
     protected $fillable = [
@@ -20,11 +20,11 @@ class HafazanRecord extends Model
         'verse_range',
         'fluency_level',
         'tajweed_notes',
-        'date',
+        'date_recorded', 
     ];
 
     protected $casts = [
-        'date' => 'date',
+        'date_recorded' => 'date', 
     ];
 
     public function student()
