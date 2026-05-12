@@ -12,6 +12,7 @@ use App\Models\Transaction;
 use App\Models\Payment;     
 use App\Models\Attendance;  
 use App\Models\AssessmentResult;
+use App\Models\PbmtReport;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth; 
 use Carbon\Carbon;
@@ -46,7 +47,6 @@ class AdminController extends Controller
                 ];
             }
 
-            // Standardize labels for the chart fallback
             $attendanceLabels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
             $attendanceData = [94, 91, 95, 89, 91];
 
@@ -63,9 +63,6 @@ class AdminController extends Controller
         ));
     }
 
-    // ==========================================
-    // NEW: ADMIN ATTENDANCE SUMMARY
-    // ==========================================
     public function attendanceSummary(Request $request) {
         $date = $request->date ?? \Carbon\Carbon::today('Asia/Kuala_Lumpur')->toDateString();
         $classrooms = \App\Models\Classroom::with('teacher')->get();
@@ -95,9 +92,6 @@ class AdminController extends Controller
         return view('admin.attendance-summary', compact('summary', 'date'));
     }
 
-    // ==========================================
-    // 9.0 REPORT MANAGEMENT (CRUCIAL UPDATE HERE)
-    // ==========================================
     public function reports() { 
         $stats = [
             'total_income' => Transaction::where('type', 'income')->sum('amount'),
@@ -107,19 +101,16 @@ class AdminController extends Controller
                                         ->groupBy('gender')->get()
         ];
 
-        // START OF CRUCIAL GRAPH DATA INJECTION
         $academicLabels = ['Belum Ada Data'];
         $academicValues = [0];
 
         try {
-            // Attempt to get data assuming 'mastery_level' is the column name
             $academicData = AssessmentResult::selectRaw('mastery_level, count(*) as total')
                                 ->groupBy('mastery_level')->orderBy('mastery_level')->get();
             $academicLabels = $academicData->map(fn($item) => 'Tahap ' . $item->mastery_level)->toArray();
             $academicValues = $academicData->pluck('total')->toArray();
         } catch (\Exception $e) {
             try {
-                // Fallback: If 'mastery_level' fails, try 'grade'
                 $academicData = AssessmentResult::selectRaw('grade as mastery_level, count(*) as total')
                                     ->groupBy('grade')->orderBy('grade')->get();
                 $academicLabels = $academicData->map(fn($item) => 'Tahap ' . $item->mastery_level)->toArray();
@@ -148,9 +139,6 @@ class AdminController extends Controller
         )); 
     }
 
-    /**
-     * AJAX METHOD: Fetch Real Cash Flow Data & Expense Breakdown
-     */
     public function getCashFlowData(Request $request) {
         $monthsCount = $request->get('timeframe') === 'thisyear' ? 12 : 6;
         $labels = [];
@@ -189,289 +177,6 @@ class AdminController extends Controller
     }
 
     // ==========================================
-    // 9.0 REPORT MANAGEMENT FUNCTIONS (PBMT)
-    // ==========================================
-
-    public function reportTakwim() {
-        $history = \App\Models\PbmtReport::where('report_type', 'takwim')->orderBy('created_at', 'desc')->get();
-        return view('admin.reports.takwim', compact('history'));
-    }
-
-    public function generateTakwim(Request $request) {
-        $request->validate([
-            'year' => 'required|integer',
-            'months' => 'required|array',
-            'tabika_days' => 'required|array',
-            'taska_days' => 'required|array',
-        ]);
-
-        $total_tabika_days = array_sum($request->tabika_days);
-        $total_taska_days = array_sum($request->taska_days);
-
-        $data = [
-            'year' => $request->year,
-            'total_tabika_days' => $total_tabika_days,
-            'total_taska_days' => $total_taska_days,
-            'rows' => []
-        ];
-
-        foreach($request->months as $index => $month) {
-            $data['rows'][] = [
-                'month' => $month,
-                'tabika_days' => $request->tabika_days[$index],
-                'tabika_notes' => $request->tabika_notes[$index] ?? '',
-                'taska_days' => $request->taska_days[$index],
-                'taska_notes' => $request->taska_notes[$index] ?? '',
-            ];
-        }
-
-        \App\Models\PbmtReport::create([
-            'report_type' => 'takwim',
-            'year' => $request->year,
-            'data_snapshot' => json_encode($data),
-            'generated_by' => Auth::guard('admin')->user()->name ?? 'Admin',
-        ]);
-
-        return redirect()->back()->with('success', 'Dokumen Takwim berjaya dijana dan disimpan!');
-    }
-
-    public function printTakwim(int $id) {
-        $report = \App\Models\PbmtReport::findOrFail($id);
-        $data = json_decode($report->data_snapshot, true);
-        return view('admin.reports.print.takwim_format', compact('report', 'data'));
-    }
-
-    public function deleteTakwim(int $id) { 
-        $report = \App\Models\PbmtReport::findOrFail($id);
-        $report->delete();
-        return redirect()->back()->with('success', 'Rekod takwim berjaya dipadam.');
-    }
-
-    public function reportUnjuran() {
-        $history = \App\Models\PbmtReport::where('report_type', 'unjuran')->orderBy('created_at', 'desc')->get();
-        return view('admin.reports.unjuran', compact('history'));
-    }
-
-    public function generateUnjuran(Request $request) {
-        $request->validate(['year' => 'required|integer']);
-
-        $baki_lepas = $request->baki_lepas ?? 0;
-        $jumlah_keseluruhan = 0;
-        $rows = [];
-
-        if($request->months) {
-            foreach($request->months as $index => $month) {
-                $kadar = $request->kadar[$index] ?? 3.00;
-                $hari = $request->hari[$index] ?? 0;
-                $kanak = $request->kanak[$index] ?? 0;
-                
-                $jumlah_bulan = $kadar * $hari * $kanak;
-                $jumlah_keseluruhan += $jumlah_bulan;
-
-                $rows[] = [
-                    'month' => $month,
-                    'kadar' => $kadar,
-                    'hari'  => $hari,
-                    'kanak' => $kanak,
-                    'jumlah_bulan' => $jumlah_bulan
-                ];
-            }
-        }
-
-        $jumlah_bersih = $jumlah_keseluruhan - $baki_lepas;
-
-        $data = [
-            'year' => $request->year,
-            'phase' => $request->phase ?? 'FASA 1',
-            'kod_smpk' => $request->kod_smpk,
-            'akaun_bank' => $request->akaun_bank,
-            'nama_bank' => $request->nama_bank,
-            'no_evendor' => $request->no_evendor,
-            'baki_lepas' => $baki_lepas,
-            'rows' => $rows,
-            'jumlah_keseluruhan' => $jumlah_keseluruhan,
-            'jumlah_bersih' => $jumlah_bersih,
-        ];
-
-        $report = \App\Models\PbmtReport::create([
-            'report_type' => 'unjuran',
-            'phase' => $request->phase ?? 'FASA 1',
-            'year' => $request->year,
-            'data_snapshot' => json_encode($data),
-            'generated_by' => Auth::guard('admin')->user()->name ?? 'Admin',
-        ]);
-
-        return redirect()->back()
-            ->with('success', 'Unjuran Kewangan PBMT berjaya dijana!')
-            ->with('auto_print', $report->id);
-    }
-
-    public function printUnjuran(int $id) {
-        $report = \App\Models\PbmtReport::findOrFail($id);
-        $data = json_decode($report->data_snapshot, true);
-        return view('admin.reports.print.unjuran_format', compact('report', 'data'));
-    }
-
-    public function deleteUnjuran(int $id) {
-        $report = \App\Models\PbmtReport::findOrFail($id);
-        $report->delete();
-        return redirect()->back()->with('success', 'Rekod Unjuran berjaya dipadam.');
-    }
-
-    public function reportRumusan() {
-        $history = \App\Models\PbmtReport::where('report_type', 'berkelompok')->orderBy('created_at', 'desc')->get();
-        return view('admin.reports.berkelompok', compact('history'));
-    }
-
-    public function generateRumusan(Request $request) {
-        $request->validate(['year' => 'required|integer']);
-
-        $rows = [];
-        $jumlah_keseluruhan = 0;
-
-        if($request->nama_tabika) {
-            foreach($request->nama_tabika as $index => $nama) {
-                if(!empty($nama)) { 
-                    $jumlah = (float)($request->jumlah[$index] ?? 0);
-                    $jumlah_keseluruhan += $jumlah;
-
-                    $rows[] = [
-                        'kod_vendor' => $request->kod_vendor[$index] ?? '',
-                        'nama_tabika' => strtoupper($nama),
-                        'nama_bank' => strtoupper($request->nama_bank[$index] ?? ''),
-                        'no_akaun' => $request->no_akaun[$index] ?? '',
-                        'jumlah' => $jumlah,
-                        'catatan' => $request->catatan[$index] ?? '',
-                    ];
-                }
-            }
-        }
-
-        $data = [
-            'year' => $request->year,
-            'phase' => $request->phase ?? 'FASA 1',
-            'parlimen' => strtoupper($request->parlimen ?? ''),
-            'negeri' => strtoupper($request->negeri ?? 'JOHOR'),
-            'rows' => $rows,
-            'jumlah_keseluruhan' => $jumlah_keseluruhan,
-        ];
-
-        $report = \App\Models\PbmtReport::create([
-            'report_type' => 'berkelompok',
-            'phase' => $request->phase ?? 'FASA 1',
-            'year' => $request->year,
-            'data_snapshot' => json_encode($data),
-            'generated_by' => Auth::guard('admin')->user()->name ?? 'Admin',
-        ]);
-
-        return redirect()->back()
-            ->with('success', 'Rumusan Berkelompok berjaya dijana!')
-            ->with('auto_print', $report->id);
-    }
-
-    public function printRumusan(int $id) {
-        $report = \App\Models\PbmtReport::findOrFail($id);
-        $data = json_decode($report->data_snapshot, true);
-        return view('admin.reports.print.berkelompok_format', compact('report', 'data'));
-    }
-
-    public function deleteRumusan(int $id) {
-        $report = \App\Models\PbmtReport::findOrFail($id);
-        $report->delete();
-        return redirect()->back()->with('success', 'Rekod Rumusan berjaya dipadam.');
-    }
-
-    public function reportPrestasi() {
-        $history = \App\Models\PbmtReport::where('report_type', 'prestasi')->orderBy('created_at', 'desc')->get();
-        return view('admin.reports.prestasi', compact('history'));
-    }
-
-    public function generatePrestasi(Request $request) {
-        $request->validate(['year' => 'required|integer']);
-
-        $jumlah_peruntukan_total = 0;
-        $jumlah_perbelanjaan_total = 0;
-        $jumlah_baki_total = 0;
-        $total_hari_peruntukan = 0;
-        $total_hari_perbelanjaan = 0;
-
-        $rows = [];
-
-        if($request->row_labels) {
-            foreach($request->row_labels as $index => $label) {
-                $kanak_p = (int)($request->kanak_p[$index] ?? 0);
-                $hari_p = (int)($request->hari_p[$index] ?? 0);
-                $peruntukan = (float)($request->peruntukan[$index] ?? 0);
-                
-                $kanak_b = (int)($request->kanak_b[$index] ?? 0);
-                $hari_b = (int)($request->hari_b[$index] ?? 0);
-                $perbelanjaan = (float)($request->perbelanjaan[$index] ?? 0);
-
-                $catatan = $request->catatan[$index] ?? '';
-                
-                $baki = $peruntukan - $perbelanjaan;
-
-                $jumlah_peruntukan_total += $peruntukan;
-                $jumlah_perbelanjaan_total += $perbelanjaan;
-                $jumlah_baki_total += $baki;
-                $total_hari_peruntukan += $hari_p;
-                $total_hari_perbelanjaan += $hari_b;
-
-                $rows[] = [
-                    'label' => $label,
-                    'kanak_p' => $kanak_p,
-                    'hari_p' => $hari_p,
-                    'peruntukan' => $peruntukan,
-                    'kanak_b' => $kanak_b,
-                    'hari_b' => $hari_b,
-                    'perbelanjaan' => $perbelanjaan,
-                    'baki' => $baki,
-                    'catatan' => $catatan
-                ];
-            }
-        }
-
-        $data = [
-            'year' => $request->year,
-            'phase' => $request->phase ?? 'FASA 1',
-            'kategori' => $request->kategori ?? 'TABIKA',
-            'nama_tabika' => $request->nama_tabika,
-            'daerah' => $request->daerah,
-            'negeri' => $request->negeri,
-            'rows' => $rows,
-            'jumlah_peruntukan_total' => $jumlah_peruntukan_total,
-            'jumlah_perbelanjaan_total' => $jumlah_perbelanjaan_total,
-            'jumlah_baki_total' => $jumlah_baki_total,
-            'total_hari_peruntukan' => $total_hari_peruntukan,
-            'total_hari_perbelanjaan' => $total_hari_perbelanjaan,
-        ];
-
-        $report = \App\Models\PbmtReport::create([
-            'report_type' => 'prestasi',
-            'phase' => $request->phase ?? 'FASA 1',
-            'year' => $request->year,
-            'data_snapshot' => json_encode($data),
-            'generated_by' => Auth::guard('admin')->user()->name ?? 'Admin',
-        ]);
-
-        return redirect()->back()
-            ->with('success', 'Laporan Prestasi Perbelanjaan berjaya dijana!')
-            ->with('auto_print', $report->id);
-    }
-
-    public function printPrestasi(int $id) {
-        $report = \App\Models\PbmtReport::findOrFail($id);
-        $data = json_decode($report->data_snapshot, true);
-        return view('admin.reports.print.prestasi_format', compact('report', 'data'));
-    }
-
-    public function deletePrestasi(int $id) {
-        $report = \App\Models\PbmtReport::findOrFail($id);
-        $report->delete();
-        return redirect()->back()->with('success', 'Rekod Prestasi berjaya dipadam.');
-    }
-
-    // ==========================================
     // 1.0 USER ACCOUNTS (Teachers & Parents)
     // ==========================================
     public function users() {
@@ -483,7 +188,8 @@ class AdminController extends Controller
     
     public function storeUser(Request $request) {
         $request->validate([
-            'email' => 'required|email|unique:teachers,email|unique:guardians,email',
+            // FIXED: Changed 'guardians' to 'parents' to match your DB table
+            'email' => 'required|email|unique:teachers,email|unique:parents,email',
             'name' => 'required|string|max:255',
             'type' => 'required|in:teacher,parent'
         ]);
@@ -552,9 +258,11 @@ class AdminController extends Controller
     // ==========================================
     public function enrolment() {
         return view('admin.enrolment', [
-            'students' => Student::with('parent')->orderBy('student_name', 'asc')->get(),
-            'parents'  => Guardian::all(),
-            'classes'  => Classroom::all() 
+            'classesWithStudents' => Classroom::with(['teacher', 'students.parent'])->get(),
+            'unassignedStudents'  => Student::whereNull('class_id')->with('parent')->get(),
+            'parents'             => Guardian::orderBy('parent_name', 'asc')->get(),
+            'classes'             => Classroom::orderBy('class_name', 'asc')->get(),
+            'teachers'            => Teacher::orderBy('full_name', 'asc')->get() 
         ]);
     }
     
@@ -562,7 +270,8 @@ class AdminController extends Controller
         $request->validate([
             'student_name' => 'required|string',
             'mykid'        => 'required|unique:students,mykid',
-            'parent_id'    => 'required|exists:guardians,parent_id',
+            // FIXED: Changed 'guardians' to 'parents' table in validation rule
+            'parent_id'    => 'required|exists:parents,parent_id',
             'dob'          => 'required|date',
             'class_id'     => 'nullable|exists:classrooms,class_id'
         ]);
@@ -599,20 +308,293 @@ class AdminController extends Controller
         $request->validate([
             'teacher_id' => 'nullable|exists:teachers,teacher_id'
         ]);
-
         $classroom = Classroom::findOrFail($id);
-        
-        $classroom->update([
-            'teacher_id' => $request->teacher_id
-        ]);
-
-        $teacherName = $request->teacher_id 
-            ? Teacher::find($request->teacher_id)->full_name 
-            : 'None';
-
+        $classroom->update(['teacher_id' => $request->teacher_id]);
+        $teacherName = $request->teacher_id ? Teacher::find($request->teacher_id)->full_name : 'None';
         return back()->with('success', "Class " . $classroom->class_name . " is now assigned to Teacher: " . $teacherName);
     }
+    // ==========================================
+    // 9.0 REPORT MANAGEMENT FUNCTIONS (PBMT)
+    // ==========================================
 
+    public function reportTakwim() {
+        $history = PbmtReport::where('report_type', 'takwim')->orderBy('created_at', 'desc')->get();
+        return view('admin.reports.takwim', compact('history'));
+    }
+
+    public function generateTakwim(Request $request) {
+        $request->validate([
+            'year' => 'required|integer',
+            'months' => 'required|array',
+            'tabika_days' => 'required|array',
+            'taska_days' => 'required|array',
+        ]);
+
+        $total_tabika_days = array_sum($request->tabika_days);
+        $total_taska_days = array_sum($request->taska_days);
+
+        $data = [
+            'year' => $request->year,
+            'total_tabika_days' => $total_tabika_days,
+            'total_taska_days' => $total_taska_days,
+            'rows' => []
+        ];
+
+        foreach($request->months as $index => $month) {
+            $data['rows'][] = [
+                'month' => $month,
+                'tabika_days' => $request->tabika_days[$index],
+                'tabika_notes' => $request->tabika_notes[$index] ?? '',
+                'taska_days' => $request->taska_days[$index],
+                'taska_notes' => $request->taska_notes[$index] ?? '',
+            ];
+        }
+
+        PbmtReport::create([
+            'report_type' => 'takwim',
+            'year' => $request->year,
+            'data_snapshot' => json_encode($data),
+            'generated_by' => Auth::guard('admin')->user()->name ?? 'Admin',
+        ]);
+
+        return redirect()->back()->with('success', 'Dokumen Takwim berjaya dijana dan disimpan!');
+    }
+
+    public function printTakwim(int $id) {
+        $report = PbmtReport::findOrFail($id);
+        $data = json_decode($report->data_snapshot, true);
+        return view('admin.reports.print.takwim_format', compact('report', 'data'));
+    }
+
+    public function deleteTakwim(int $id) { 
+        $report = PbmtReport::findOrFail($id);
+        $report->delete();
+        return redirect()->back()->with('success', 'Rekod takwim berjaya dipadam.');
+    }
+
+    public function reportUnjuran() {
+        $history = PbmtReport::where('report_type', 'unjuran')->orderBy('created_at', 'desc')->get();
+        return view('admin.reports.unjuran', compact('history'));
+    }
+
+    public function generateUnjuran(Request $request) {
+        $request->validate(['year' => 'required|integer']);
+
+        $baki_lepas = $request->baki_lepas ?? 0;
+        $jumlah_keseluruhan = 0;
+        $rows = [];
+
+        if($request->months) {
+            foreach($request->months as $index => $month) {
+                $kadar = $request->kadar[$index] ?? 3.00;
+                $hari = $request->hari[$index] ?? 0;
+                $kanak = $request->kanak[$index] ?? 0;
+                
+                $jumlah_bulan = $kadar * $hari * $kanak;
+                $jumlah_keseluruhan += $jumlah_bulan;
+
+                $rows[] = [
+                    'month' => $month,
+                    'kadar' => $kadar,
+                    'hari'  => $hari,
+                    'kanak' => $kanak,
+                    'jumlah_bulan' => $jumlah_bulan
+                ];
+            }
+        }
+
+        $jumlah_bersih = $jumlah_keseluruhan - $baki_lepas;
+
+        $data = [
+            'year' => $request->year,
+            'phase' => $request->phase ?? 'FASA 1',
+            'kod_smpk' => $request->kod_smpk,
+            'akaun_bank' => $request->akaun_bank,
+            'nama_bank' => $request->nama_bank,
+            'no_evendor' => $request->no_evendor,
+            'baki_lepas' => $baki_lepas,
+            'rows' => $rows,
+            'jumlah_keseluruhan' => $jumlah_keseluruhan,
+            'jumlah_bersih' => $jumlah_bersih,
+        ];
+
+        $report = PbmtReport::create([
+            'report_type' => 'unjuran',
+            'phase' => $request->phase ?? 'FASA 1',
+            'year' => $request->year,
+            'data_snapshot' => json_encode($data),
+            'generated_by' => Auth::guard('admin')->user()->name ?? 'Admin',
+        ]);
+
+        return redirect()->back()
+            ->with('success', 'Unjuran Kewangan PBMT berjaya dijana!')
+            ->with('auto_print', $report->id);
+    }
+
+    public function printUnjuran(int $id) {
+        $report = PbmtReport::findOrFail($id);
+        $data = json_decode($report->data_snapshot, true);
+        return view('admin.reports.print.unjuran_format', compact('report', 'data'));
+    }
+
+    public function deleteUnjuran(int $id) {
+        $report = PbmtReport::findOrFail($id);
+        $report->delete();
+        return redirect()->back()->with('success', 'Rekod Unjuran berjaya dipadam.');
+    }
+
+    public function reportRumusan() {
+        $history = PbmtReport::where('report_type', 'berkelompok')->orderBy('created_at', 'desc')->get();
+        return view('admin.reports.berkelompok', compact('history'));
+    }
+
+    public function generateRumusan(Request $request) {
+        $request->validate(['year' => 'required|integer']);
+
+        $rows = [];
+        $jumlah_keseluruhan = 0;
+
+        if($request->nama_tabika) {
+            foreach($request->nama_tabika as $index => $nama) {
+                if(!empty($nama)) { 
+                    $jumlah = (float)($request->jumlah[$index] ?? 0);
+                    $jumlah_keseluruhan += $jumlah;
+
+                    $rows[] = [
+                        'kod_vendor' => $request->kod_vendor[$index] ?? '',
+                        'nama_tabika' => strtoupper($nama),
+                        'nama_bank' => strtoupper($request->nama_bank[$index] ?? ''),
+                        'no_akaun' => $request->no_akaun[$index] ?? '',
+                        'jumlah' => $jumlah,
+                        'catatan' => $request->catatan[$index] ?? '',
+                    ];
+                }
+            }
+        }
+
+        $data = [
+            'year' => $request->year,
+            'phase' => $request->phase ?? 'FASA 1',
+            'parlimen' => strtoupper($request->parlimen ?? ''),
+            'negeri' => strtoupper($request->negeri ?? 'JOHOR'),
+            'rows' => $rows,
+            'jumlah_keseluruhan' => $jumlah_keseluruhan,
+        ];
+
+        $report = PbmtReport::create([
+            'report_type' => 'berkelompok',
+            'phase' => $request->phase ?? 'FASA 1',
+            'year' => $request->year,
+            'data_snapshot' => json_encode($data),
+            'generated_by' => Auth::guard('admin')->user()->name ?? 'Admin',
+        ]);
+
+        return redirect()->back()
+            ->with('success', 'Rumusan Berkelompok berjaya dijana!')
+            ->with('auto_print', $report->id);
+    }
+
+    public function printRumusan(int $id) {
+        $report = PbmtReport::findOrFail($id);
+        $data = json_decode($report->data_snapshot, true);
+        return view('admin.reports.print.berkelompok_format', compact('report', 'data'));
+    }
+
+    public function deleteRumusan(int $id) {
+        $report = PbmtReport::findOrFail($id);
+        $report->delete();
+        return redirect()->back()->with('success', 'Rekod Rumusan berjaya dipadam.');
+    }
+
+    public function reportPrestasi() {
+        $history = PbmtReport::where('report_type', 'prestasi')->orderBy('created_at', 'desc')->get();
+        return view('admin.reports.prestasi', compact('history'));
+    }
+
+    public function generatePrestasi(Request $request) {
+        $request->validate(['year' => 'required|integer']);
+
+        $jumlah_peruntukan_total = 0;
+        $jumlah_perbelanjaan_total = 0;
+        $jumlah_baki_total = 0;
+        $total_hari_peruntukan = 0;
+        $total_hari_perbelanjaan = 0;
+
+        $rows = [];
+
+        if($request->row_labels) {
+            foreach($request->row_labels as $index => $label) {
+                $kanak_p = (int)($request->kanak_p[$index] ?? 0);
+                $hari_p = (int)($request->hari_p[$index] ?? 0);
+                $peruntukan = (float)($request->peruntukan[$index] ?? 0);
+                
+                $kanak_b = (int)($request->kanak_b[$index] ?? 0);
+                $hari_b = (int)($request->hari_b[$index] ?? 0);
+                $perbelanjaan = (float)($request->perbelanjaan[$index] ?? 0);
+
+                $catatan = $request->catatan[$index] ?? '';
+                
+                $baki = $peruntukan - $perbelanjaan;
+
+                $jumlah_peruntukan_total += $peruntukan;
+                $jumlah_perbelanjaan_total += $perbelanjaan;
+                $jumlah_baki_total += $baki;
+                $total_hari_peruntukan += $hari_p;
+                $total_hari_perbelanjaan += $hari_b;
+
+                $rows[] = [
+                    'label' => $label,
+                    'kanak_p' => $kanak_p,
+                    'hari_p' => $hari_p,
+                    'peruntukan' => $peruntukan,
+                    'kanak_b' => $kanak_b,
+                    'hari_b' => $hari_b,
+                    'perbelanjaan' => $perbelanjaan,
+                    'baki' => $baki,
+                    'catatan' => $catatan
+                ];
+            }
+        }
+
+        $data = [
+            'year' => $request->year,
+            'phase' => $request->phase ?? 'FASA 1',
+            'kategori' => $request->kategori ?? 'TABIKA',
+            'nama_tabika' => $request->nama_tabika,
+            'daerah' => $request->daerah,
+            'negeri' => $request->negeri,
+            'rows' => $rows,
+            'jumlah_peruntukan_total' => $jumlah_peruntukan_total,
+            'jumlah_perbelanjaan_total' => $jumlah_perbelanjaan_total,
+            'jumlah_baki_total' => $jumlah_baki_total,
+            'total_hari_peruntukan' => $total_hari_peruntukan,
+            'total_hari_perbelanjaan' => $total_hari_perbelanjaan,
+        ];
+
+        $report = PbmtReport::create([
+            'report_type' => 'prestasi',
+            'phase' => $request->phase ?? 'FASA 1',
+            'year' => $request->year,
+            'data_snapshot' => json_encode($data),
+            'generated_by' => Auth::guard('admin')->user()->name ?? 'Admin',
+        ]);
+
+        return redirect()->back()
+            ->with('success', 'Laporan Prestasi Perbelanjaan berjaya dijana!')
+            ->with('auto_print', $report->id);
+    }
+
+    public function printPrestasi(int $id) {
+        $report = PbmtReport::findOrFail($id);
+        $data = json_decode($report->data_snapshot, true);
+        return view('admin.reports.print.prestasi_format', compact('report', 'data'));
+    }
+
+    public function deletePrestasi(int $id) {
+        $report = PbmtReport::findOrFail($id);
+        $report->delete();
+        return redirect()->back()->with('success', 'Rekod Prestasi berjaya dipadam.');
+    }
 
     // ==========================================
     // 5.0 ASSESSMENT SETUP (Pengurusan Pentaksiran)
@@ -655,7 +637,6 @@ class AdminController extends Controller
 
         return back()->with('success', 'Sesi Pentaksiran berjaya dipadam.');
     }
-
 
     // ==========================================
     // 8.0 FINANCE (Process 8.0 in DFD)
@@ -765,7 +746,6 @@ class AdminController extends Controller
 
         return back()->with('error', 'Payment rejected. Parent has been notified.');
     }
-
 
     // ==========================================
     // 10.0 SCHOOL EVENTS (Fully Synced with Google)

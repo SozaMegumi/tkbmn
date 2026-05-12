@@ -48,6 +48,9 @@ Route::middleware('auth:admin')->prefix('admin')->name('admin.')->group(function
     Route::post('/enrolment/store', [AdminController::class, 'storeStudent'])->name('enrolment.store');
     Route::put('/enrolment/update/{id}', [AdminController::class, 'updateStudent'])->name('enrolment.update');
     Route::delete('/enrolment/delete/{id}', [AdminController::class, 'deleteStudent'])->name('enrolment.delete');
+    
+    // ADDED BACK: Route for Assigning Teachers to Classes in the old-style UI
+    Route::put('/enrolment/assign-teacher/{id}', [AdminController::class, 'updateClassTeacher'])->name('enrolment.assign-teacher');
 
     // 5.0 ASSESSMENT SETUP
     Route::get('/exams', [AdminController::class, 'exams'])->name('exams');
@@ -114,6 +117,9 @@ Route::middleware('auth:teacher')->prefix('teacher')->name('teacher.')->group(fu
 
     Route::get('/communication', [TeacherController::class, 'communication'])->name('communication');
     Route::post('/communication/send', [TeacherController::class, 'sendMessage'])->name('chat.send');
+    
+    // --- THIS IS THE FIX ---
+    Route::get('/hafazan', [TeacherController::class, 'hafazan'])->name('hafazan'); 
 });
 
 
