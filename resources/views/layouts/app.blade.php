@@ -231,6 +231,7 @@
             @endif
 
         </ul>
+        
         <div class="p-3 mt-auto">
             <div class="d-flex bg-dark bg-opacity-25 rounded-pill p-1 mb-3" style="border: 1px solid rgba(255,255,255,0.1);">
                 <a href="{{ route('lang.swap', 'en') }}" class="btn btn-sm w-50 rounded-pill {{ app()->getLocale() == 'en' ? 'bg-primary text-white fw-bold shadow-sm' : 'text-secondary' }}" style="transition: all 0.3s;">
@@ -241,38 +242,33 @@
                 </a>
             </div>
 
-         <div class="p-3">
             <form action="{{ route('logout') }}" method="POST">
                 @csrf
-                <button class="btn btn-outline-danger w-100 py-2 rounded-3 d-flex align-items-center justify-content-center" style="border-color: rgba(255,255,255,0.2); color: #ffadad;">
+                <button type="submit" class="btn btn-outline-danger w-100 py-2 rounded-3 d-flex align-items-center justify-content-center" style="border-color: rgba(255,255,255,0.2); color: #ffadad;">
                     <i class="bi bi-box-arrow-right me-2"></i> Logout
                 </button>
             </form>
         </div>
         
-       
-            </form>
-        </div>
     </div>
 
-  <div class="main-content">
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i> {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
+    <div class="main-content">
+        @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i> {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
 
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
+        @if(session('error'))
+            <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
 
-
-    @yield('content')
-</div>
+        @yield('content')
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 </body>
