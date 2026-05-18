@@ -62,7 +62,6 @@
         </div>
     </div>
 
-    <!-- FLASH MESSAGES -->
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show shadow-sm border-0 mb-4">
             <i class="bi bi-check-circle-fill me-2"></i> {{ session('success') }}
@@ -77,7 +76,6 @@
         </div>
     @endif
 
-    <!-- TOP CARDS SUMMARY -->
     <div class="row g-4 mb-4">
         <div class="col-lg-6">
             <div class="card card-soft bg-gradient-primary h-100 p-4">
@@ -121,7 +119,6 @@
         </div>
     </div>
 
-    <!-- 1. GRAPHS (Cash Flow & Expense) -->
     <div class="row g-4 mb-4">
         <div class="col-lg-7">
             <div class="card card-soft h-100 bg-white">
@@ -161,7 +158,6 @@
         </div>
     </div>
 
-    <!-- 2. PENDING PARENT PAYMENTS -->
     <div class="card card-soft bg-white mb-4 border-warning">
         <div class="card-header bg-warning bg-opacity-10 p-4 border-0">
             <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-clock-history me-2"></i> Pending Parent Payments</h5>
@@ -205,7 +201,6 @@
         </div>
     </div>
 
-    <!-- 3. STUDENT FEE TRACKER -->
     <div class="card border-0 shadow-sm rounded-4 mb-4">
         <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 d-flex justify-content-between align-items-center">
             <h5 class="fw-bold text-dark mb-0"><i class="bi bi-people-fill text-primary me-2"></i> Student Fee Tracker</h5>
@@ -223,13 +218,11 @@
                     <h2 class="accordion-header" id="heading{{ $class->class_id }}">
                         <button class="accordion-button {{ $index == 0 ? '' : 'collapsed' }} fw-bold bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ $class->class_id }}">
                             
-                            <!-- FIXED: Now checks for 'class_name', 'name', or defaults to the ID if both are missing -->
                             <i class="bi bi-journal-bookmark-fill text-primary me-2"></i>
                             <span class="text-dark me-3 fs-6">
                                 {{ $class->class_name ?? $class->name ?? 'Class ' . $class->class_id }}
                             </span>
                             
-                            <!-- Improved Badge Styling -->
                             <span class="badge bg-primary bg-opacity-10 text-primary border border-primary rounded-pill">
                                 {{ $class->students->count() }} Students
                             </span>
@@ -285,7 +278,6 @@
         </div>
     </div>
 
-    <!-- 4. TRANSACTION HISTORY (WITH VIEW RECEIPT BUTTON) -->
     <div class="card card-soft bg-white mb-4">
         <div class="card-header bg-white p-4 border-0 d-flex justify-content-between align-items-center">
             <h5 class="fw-bold mb-0 text-dark">Transaction History</h5>
@@ -327,7 +319,6 @@
                         <td class="text-end pe-4">
                             <div class="d-flex justify-content-end align-items-center gap-2">
                                 
-                                <!-- ADJUSTED: Always show a button so layout is clean. Disabled if no receipt. -->
                                 @if(!empty($t->receipt_path))
                                     <a href="{{ asset('storage/' . $t->receipt_path) }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View Uploaded Receipt">
                                         <i class="bi bi-file-earmark-text"></i> View
@@ -362,11 +353,8 @@
 
 </div>
 
-<!-- MODALS WITH ENCTYPE ADDED FOR FILE UPLOAD -->
-
 <div class="modal fade" id="incomeModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <!-- ADDED enctype="multipart/form-data" -->
         <form class="modal-content border-0 shadow" action="{{ route('admin.finance.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
             <input type="hidden" name="type" value="income">
@@ -375,29 +363,48 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4 bg-light">
+                
                 <div class="mb-3">
                     <label class="small fw-bold text-muted">Category</label>
-                    <select name="category" class="form-select border-0 shadow-sm py-2">
+                    <select name="category" id="incomeCategory" class="form-select border-0 shadow-sm py-2">
                         <option value="School Fees">Monthly School Fees</option>
                         <option value="Registration Fee">Registration Fee</option>
                         <option value="Uniform/Books">Uniform & Books Sales</option>
                         <option value="Donation">Donation / Grant</option>
+                        <option value="Other">Other Income</option>
                     </select>
                 </div>
+
+                <div class="mb-3" id="studentInvoiceWrapper">
+                    <label class="small fw-bold text-muted">Select Unpaid Student Invoice (Optional)</label>
+                    <select name="payment_id" id="admin_payment_id" class="form-select border-0 shadow-sm py-2">
+                        <option value="" data-amount="" data-desc="">-- Or select an unpaid invoice --</option>
+                        @foreach($pendingPayments ?? [] as $invoice)
+                            <option value="{{ $invoice->payment_id }}" 
+                                    data-amount="{{ $invoice->amount }}" 
+                                    data-desc="{{ $invoice->student->student_name ?? 'Student' }} - {{ $invoice->admin_remarks ?? 'Fee' }}">
+                                {{ $invoice->student->student_name ?? 'Unknown' }} (RM {{ number_format($invoice->amount, 2) }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
                 <div class="mb-3">
                     <label class="small fw-bold text-muted">Description (Who Paid?)</label>
-                    <input type="text" name="description" class="form-control border-0 shadow-sm py-2" placeholder="e.g. Ali Bin Abu (Jan Fee)" required>
+                    <input type="text" id="admin_desc" name="description" class="form-control border-0 shadow-sm py-2" placeholder="e.g. Ali Bin Abu (Jan Fee)" required>
                 </div>
+                
                 <div class="row">
                     <div class="col-6 mb-3">
                         <label class="small fw-bold text-muted">Amount (RM)</label>
-                        <input type="number" step="0.01" name="amount" class="form-control border-0 shadow-sm py-2 text-success fw-bold" placeholder="0.00" required>
+                        <input type="number" step="0.01" id="admin_amount" name="amount" class="form-control border-0 shadow-sm py-2 text-success fw-bold" placeholder="0.00" required>
                     </div>
                     <div class="col-6 mb-3">
                         <label class="small fw-bold text-muted">Date</label>
                         <input type="date" name="date" class="form-control border-0 shadow-sm py-2" value="{{ date('Y-m-d') }}" required>
                     </div>
                 </div>
+                
                 <div class="mb-3">
                     <label class="small fw-bold text-muted">Payment Method</label>
                     <select name="payment_method" class="form-select border-0 shadow-sm py-2">
@@ -407,7 +414,6 @@
                     </select>
                 </div>
 
-                <!-- NEW OPTIONAL FILE UPLOAD FIELD -->
                 <div class="mb-2">
                     <label class="small fw-bold text-muted">Upload Receipt / Document (Optional)</label>
                     <input type="file" name="receipt_file" class="form-control border-0 shadow-sm" accept=".jpg,.jpeg,.png,.pdf">
@@ -424,7 +430,6 @@
 
 <div class="modal fade" id="expenseModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <!-- ADDED enctype="multipart/form-data" -->
         <form class="modal-content border-0 shadow" action="{{ route('admin.finance.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
             <input type="hidden" name="type" value="expense">
@@ -466,7 +471,6 @@
                     </select>
                 </div>
 
-                <!-- NEW OPTIONAL FILE UPLOAD FIELD -->
                 <div class="mb-2">
                     <label class="small fw-bold text-muted">Upload Receipt / Proof (Optional)</label>
                     <input type="file" name="receipt_file" class="form-control border-0 shadow-sm" accept=".jpg,.jpeg,.png,.pdf">
@@ -504,6 +508,29 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+// --- AUTO FILL INCOME FORM ---
+document.addEventListener("DOMContentLoaded", function() {
+    const paymentSelect = document.getElementById('admin_payment_id');
+    const amountInput = document.getElementById('admin_amount');
+    const descInput = document.getElementById('admin_desc');
+
+    if(paymentSelect && amountInput && descInput) {
+        paymentSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const amount = selectedOption.getAttribute('data-amount');
+            const desc = selectedOption.getAttribute('data-desc');
+            
+            if (amount) {
+                amountInput.value = parseFloat(amount).toFixed(2);
+                descInput.value = desc; // Auto isi deskripsi 
+            } else {
+                amountInput.value = ''; 
+                descInput.value = ''; 
+            }
+        });
+    }
+});
+
 // --- EXISTING CHART JS ---
 let cashFlowChartInstance = null;
 let expenseChartInstance = null; 

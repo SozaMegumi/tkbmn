@@ -40,29 +40,28 @@
             <p class="text-muted small mb-0">Manage fees for your registered children.</p>
         </div>
         <div class="text-end">
-            <span class="d-block fw-bold text-dark">{{ auth()->user()->parent_name }}</span>
+            <span class="d-block fw-bold text-dark">{{ auth()->guard('parent')->user()->parent_name }}</span>
             <small class="text-muted">Parent Portal</small>
         </div>
     </div>
 
-    <!-- FLASH MESSAGES (Success / System Errors) -->
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show shadow-sm border-0 mb-4">
+        <div class="alert alert-success alert-dismissible fade show shadow-sm border-0 mb-4 rounded-3">
             <i class="bi bi-check-circle-fill me-2"></i> {{ session('success') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
     @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show shadow-sm border-0 mb-4">
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm border-0 mb-4 rounded-3">
             <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ session('error') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
     @php
-        $totalOutstanding = $pendingInvoices->sum('amount');
-        $lastPayment = $paymentHistory->first();
+        $totalOutstanding = collect($pendingInvoices)->sum('amount');
+        $lastPayment = collect($paymentHistory)->first();
     @endphp
 
     <div class="row g-4 mb-4">
@@ -93,9 +92,18 @@
         <div class="col-lg-8">
             <div class="card card-soft">
                 <div class="card-header bg-white p-4 border-bottom-0 d-flex justify-content-between align-items-center">
-                    <h5 class="fw-bold mb-0 text-dark">Current / Pending Invoices</h5>
-                    <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-2">{{ count($pendingInvoices) }} Items</span>
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark">Current / Pending Invoices</h5>
+                        <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-1 mt-1">{{ count($pendingInvoices) }} Items</span>
+                    </div>
+                    
+                    @if(count($pendingInvoices) > 0)
+                        <button class="btn btn-primary fw-bold px-4 py-2 shadow-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#paymentModal">
+                            <i class="bi bi-wallet2 me-2"></i> Pay Now
+                        </button>
+                    @endif
                 </div>
+                
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush">
                         
@@ -125,13 +133,11 @@
 
                     </div>
                 </div>
-                <div class="card-footer bg-light p-4 border-top">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="text-muted small">Please make payment to: <strong>Maybank 1623 4567 8910 (Tabika Kemas BMN)</strong></span>
-                        <button class="btn btn-primary fw-bold px-4 py-2 shadow-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#paymentModal">
-                            <i class="bi bi-upload me-2"></i> Submit Payment Proof
-                        </button>
-                    </div>
+                
+                <div class="card-footer bg-light p-4 border-top text-center">
+                    <span class="text-muted small">
+                        <i class="bi bi-info-circle me-1"></i> Please clear your outstanding balance promptly.
+                    </span>
                 </div>
             </div>
         </div>
@@ -173,18 +179,16 @@
 
 <div class="modal fade" id="paymentModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <form class="modal-content border-0 shadow" method="POST" action="{{ route('parent.payment.upload') }}" enctype="multipart/form-data">
-            @csrf
-            <div class="modal-header bg-primary text-white border-0">
-                <h5 class="modal-title fw-bold"><i class="bi bi-cloud-arrow-up-fill me-2"></i> Submit Payment Receipt</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header bg-white border-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                <h5 class="modal-title fw-bold text-dark"><i class="bi bi-wallet2 text-primary me-2"></i> Pilihan Pembayaran</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4 bg-light">
-                
-                <!-- VALIDATION ERROR CATCHER -->
+            
+            <div class="modal-body p-4 bg-white">
                 @if ($errors->any())
-                    <div class="alert alert-danger shadow-sm border-0 small">
-                        <strong>Please fix the following issues:</strong>
+                    <div class="alert alert-danger shadow-sm border-0 small rounded-3">
+                        <strong>Terdapat ralat:</strong>
                         <ul class="mb-0 mt-1">
                             @foreach ($errors->all() as $error)
                                 <li>{{ $error }}</li>
@@ -193,67 +197,113 @@
                     </div>
                 @endif
 
-                <div class="alert alert-info border-0 shadow-sm mb-4">
-                    <small>
-                        <strong>Bank Details:</strong><br>
-                        Bank: Maybank<br>
-                        Acc Name: Tabika Kemas Bustanul Makwan Najwa<br>
-                        Acc No: 1623 4567 8910
-                    </small>
-                </div>
+                <ul class="nav nav-pills mb-4 d-flex bg-light p-1 rounded-pill" id="paymentTabs" role="tablist">
+                    <li class="nav-item flex-fill text-center" role="presentation">
+                        <button class="nav-link active w-100 rounded-pill fw-bold" id="stripe-tab" data-bs-toggle="pill" data-bs-target="#stripe-payment" type="button" role="tab">
+                            <i class="bi bi-credit-card-fill me-1"></i> Online / FPX
+                        </button>
+                    </li>
+                    <li class="nav-item flex-fill text-center" role="presentation">
+                        <button class="nav-link w-100 rounded-pill fw-bold" id="manual-tab" data-bs-toggle="pill" data-bs-target="#manual-payment" type="button" role="tab">
+                            <i class="bi bi-receipt me-1"></i> Resit Manual
+                        </button>
+                    </li>
+                </ul>
 
-                <!-- CHILD SELECTION DROPDOWN -->
-                <div class="mb-3">
-                    <label class="small fw-bold text-muted mb-2">Payment For (Student)</label>
-                    <select name="student_id" class="form-select border-0 shadow-sm py-2" required>
-                        <option value="">-- Select Child --</option>
-                        @php
-                            $student = \App\Models\Student::where('parent_id', auth()->user()->parent_id)->first();
-                        @endphp
-                        @if($student)
-                            <option value="{{ $student->student_id }}">{{ $student->student_name }}</option>
-                        @endif
-                    </select>
-                </div>
+                <div class="tab-content" id="paymentTabsContent">
+                    
+                    <div class="tab-pane fade show active" id="stripe-payment" role="tabpanel">
+                        <div class="alert alert-primary bg-primary bg-opacity-10 border-0 shadow-sm rounded-3 mb-4">
+                            <small class="text-primary fw-bold"><i class="bi bi-shield-check me-1"></i> Pembayaran selamat melalui Stripe (Sokongan FPX, Kad Kredit/Debit).</small>
+                        </div>
+                        
+                        <form method="POST" action="{{ route('parent.payment.pay') }}">
+                            @csrf
+                            
+                            <div class="mb-3">
+                                <label class="small fw-bold text-muted mb-2">Pilih Invois Tertunggak</label>
+                                <select name="payment_id" class="form-select border-light shadow-sm py-2 bg-light" required>
+                                    <option value="">-- Pilih Invois --</option>
+                                    @foreach($pendingInvoices as $invoice)
+                                        <option value="{{ $invoice->payment_id }}">
+                                            {{ $invoice->admin_remarks ?? 'Yuran' }} - {{ $invoice->student->student_name ?? '' }} (RM {{ number_format($invoice->amount, 2) }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
 
-                <div class="mb-3">
-                    <label class="small fw-bold text-muted mb-2">Payment Amount (RM)</label>
-                    <input type="number" step="0.01" name="amount" class="form-control border-0 shadow-sm py-2" placeholder="e.g. 150.00" required>
-                </div>
-                
-                <div class="mb-4">
-                    <label class="small fw-bold text-muted mb-2">Reference / Notes</label>
-                    <input type="text" name="reference" class="form-control border-0 shadow-sm py-2" placeholder="e.g. Yuran Ahmad Mei & Buku" required>
-                </div>
+                            <button type="submit" class="btn btn-primary w-100 fw-bold rounded-pill py-3 shadow-sm mt-3">
+                                <i class="bi bi-lock-fill me-2"></i> Teruskan ke Pembayaran Selamat
+                            </button>
+                        </form>
+                    </div>
 
-                <label class="small fw-bold text-muted mb-2">Upload Bank Receipt (JPG/PNG/PDF)</label>
-                <div class="file-upload-box" onclick="document.getElementById('receiptInput').click()">
-                    <i class="bi bi-cloud-arrow-up text-primary" style="font-size: 2.5rem;"></i>
-                    <h6 class="fw-bold mt-2 text-dark">Click to browse files</h6>
-                    <small class="text-muted">Max file size: 2MB</small>
-                    <input type="file" name="receipt" id="receiptInput" class="d-none" accept=".jpg,.jpeg,.png,.pdf" onchange="updateFileName(this)" required>
-                </div>
-                <div id="fileNameDisplay" class="text-center mt-2 small fw-bold text-success"></div>
+                    <div class="tab-pane fade" id="manual-payment" role="tabpanel">
+                        <div class="alert alert-info bg-info bg-opacity-10 border-0 shadow-sm rounded-3 mb-4">
+                            <small class="text-dark">
+                                <strong>Maklumat Bank Tabika:</strong><br>
+                                Bank: Maybank<br>
+                                Nama: Tabika Kemas Bustanul Makwan Najwa<br>
+                                No. Akaun: 1623 4567 8910
+                            </small>
+                        </div>
 
+                        <form method="POST" action="{{ route('parent.payment.upload') }}" enctype="multipart/form-data">
+                            @csrf
+                            
+                            <div class="mb-3">
+                                <label class="small fw-bold text-muted mb-2">Pilih Invois Berkenaan</label>
+                                <select name="payment_id" class="form-select border-light shadow-sm py-2 bg-light" required>
+                                    <option value="">-- Pilih Invois --</option>
+                                    @foreach($pendingInvoices as $invoice)
+                                        <option value="{{ $invoice->payment_id }}">
+                                            {{ $invoice->admin_remarks ?? 'Yuran' }} - {{ $invoice->student->student_name ?? '' }} (RM {{ number_format($invoice->amount, 2) }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="small fw-bold text-muted mb-2">Jumlah Dibayar (RM)</label>
+                                <input type="number" step="0.01" name="amount" class="form-control border-light shadow-sm py-2 bg-light" placeholder="Cth: 150.00" required>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="small fw-bold text-muted mb-2">Catatan Tambahan (Pilihan)</label>
+                                <input type="text" name="reference" class="form-control border-light shadow-sm py-2 bg-light" placeholder="Cth: Yuran Bulan Mei">
+                            </div>
+
+                            <label class="small fw-bold text-muted mb-2">Muat Naik Bukti Pindahan (PDF/JPG/PNG)</label>
+                            <div class="file-upload-box" onclick="document.getElementById('receiptInput').click()">
+                                <i class="bi bi-cloud-arrow-up text-secondary" style="font-size: 2.5rem;"></i>
+                                <h6 class="fw-bold mt-2 text-dark">Klik untuk cari fail</h6>
+                                <small class="text-muted">Saiz maksimum: 2MB</small>
+                                <input type="file" name="receipt" id="receiptInput" class="d-none" accept=".jpg,.jpeg,.png,.pdf" onchange="updateFileName(this)" required>
+                            </div>
+                            <div id="fileNameDisplay" class="text-center mt-2 small fw-bold text-success"></div>
+
+                            <button type="submit" class="btn btn-dark w-100 fw-bold rounded-pill py-3 shadow-sm mt-4">
+                                <i class="bi bi-upload me-2"></i> Hantar Resit untuk Pengesahan
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
             </div>
-            
-            <div class="modal-footer border-0 bg-white">
-                <button type="submit" class="btn btn-primary w-100 fw-bold rounded-pill py-2 shadow-sm">Submit for Admin Approval</button>
-            </div>
-        </form>
+        </div>
     </div>
 </div>
 
 <script>
     function updateFileName(input) {
         if (input.files && input.files[0]) {
-            document.getElementById('fileNameDisplay').innerText = "Selected file: " + input.files[0].name;
+            document.getElementById('fileNameDisplay').innerText = "Fail dipilih: " + input.files[0].name;
             document.querySelector('.file-upload-box').style.borderColor = '#11998e';
             document.querySelector('.file-upload-box').style.backgroundColor = '#f0fdf4';
         }
     }
 
-    // AUTO-OPEN MODAL IF THERE ARE ERRORS
+    // AUTO-OPEN MODAL IF THERE ARE VALIDATION ERRORS
     document.addEventListener("DOMContentLoaded", function() {
         @if($errors->any())
             var myModal = new bootstrap.Modal(document.getElementById('paymentModal'));

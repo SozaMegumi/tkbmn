@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use Stripe\Stripe;
+use Stripe\Checkout\Session as StripeSession;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -162,7 +164,7 @@ class ParentController extends Controller
             'sender_type'     => 'App\Models\Guardian', 
             'receiver_id'     => $request->receiver_id,
             'receiver_type'   => 'App\Models\Teacher', 
-            'message_content' => $request->message,
+            'message_content' => $request->message ?? '',
             'attachment'      => $attachmentPath,
             'read_at'         => null
         ]);
@@ -179,22 +181,44 @@ class ParentController extends Controller
     }
 
     // ==========================================
-    // 8. PAYMENT PAGE 
+    // 8. EVENTS CALENDAR
+    // ==========================================
+    public function events() {
+        $parent = Auth::guard('parent')->user();
+        if (!$parent) return redirect()->route('login');
+
+        $upcomingEvents = \App\Models\Event::where('start_date', '>=', now()->startOfDay())
+                                  ->orderBy('start_date', 'asc')
+                                  ->get();
+
+        return view('parent.events', compact('upcomingEvents'));
+    }
+
+    // ==========================================
+    // 9. PAYMENT PAGE (VIEW)
     // ==========================================
     public function payment() {
         $parent = Auth::guard('parent')->user();
-        $student = Student::where('parent_id', $parent->parent_id)->first();
-
-        if(!$student) {
-            return view('parent.payment', ['pendingInvoices' => [], 'paymentHistory' => []]);
+        
+        // Ambil SEMUA anak di bawah parent ini
+        $students = Student::where('parent_id', $parent->parent_id)->get();
+        
+        // Jika parent tiada anak berdaftar lagi
+        if($students->isEmpty()) {
+            return view('parent.payment', ['pendingInvoices' => collect(), 'paymentHistory' => collect()]);
         }
 
-        $pendingInvoices = Payment::where('student_id', $student->student_id)
+        // Dapatkan array ID untuk semua anak-anak tersebut
+        $studentIds = $students->pluck('student_id');
+
+        $pendingInvoices = Payment::with('student')
+                                  ->whereIn('student_id', $studentIds)
                                   ->whereIn('status', ['Unpaid', 'Pending']) 
                                   ->orderBy('created_at', 'desc')
                                   ->get();
 
-        $paymentHistory = Payment::where('student_id', $student->student_id)
+        $paymentHistory = Payment::with('student')
+                                 ->whereIn('student_id', $studentIds)
                                  ->where('status', 'Paid')
                                  ->orderBy('created_at', 'desc') 
                                  ->get();
@@ -203,56 +227,101 @@ class ParentController extends Controller
     }
 
     // ==========================================
-    // 9. UPLOAD RECEIPT
+    // 10. PAYMENT GATEWAY (STRIPE) & MANUAL UPLOAD
     // ==========================================
+
+    // --- CARA 1: MANUAL UPLOAD RESIT ---
     public function uploadReceipt(Request $request) {
         $request->validate([
+            'payment_id' => 'required', 
             'amount' => 'required|numeric|min:1',
             'receipt' => 'required|file|mimes:pdf,jpg,jpeg,png|max:2048', 
         ]);
         
-        $parent = Auth::guard('parent')->user();
-        $student = Student::where('parent_id', $parent->parent_id)->first();
+        $payment = Payment::where('payment_id', $request->payment_id)->first();
 
-        if(!$student) {
-            return back()->with('error', 'Gagal memproses. Tiada rekod murid di bawah akaun anda.');
+        if (!$payment) {
+            return back()->with('error', 'Ralat: Invois tidak dijumpai.');
         }
 
-        $receiptPath = null;
         if ($request->hasFile('receipt')) {
-            $receiptPath = $request->file('receipt')->store('receipts', 'public');
+            $payment->update([
+                'receipt_path' => $request->file('receipt')->store('receipts', 'public'),
+                'status' => 'Pending', 
+                'admin_remarks' => $request->reference ?? $payment->admin_remarks 
+            ]);
         }
-
-        Payment::create([
-            'student_id' => $student->student_id,
-            'title' => $request->reference ?? 'Bayaran Yuran Bulanan', 
-            'amount' => $request->amount,
-            'receipt_path' => $receiptPath,
-            'status' => 'Pending', 
-            'admin_remarks' => $request->reference ?? 'Bayaran Yuran Bulanan' 
-        ]);
 
         return back()->with('success', 'Resit berjaya dimuat naik! Sila tunggu pengesahan Admin.');
     }
 
-    // ==========================================
-    // 10. EVENTS CALENDAR
-    // ==========================================
-    public function events() {
-        $upcomingEvents = Event::where('start_date', '>=', now()->startOfDay())
-            ->orderBy('start_date', 'asc')
-            ->get()
-            ->map(function($event) {
-                return [
-                    'title' => $event->title,
-                    'description' => $event->description,
-                    'date_only' => Carbon::parse($event->start_date)->toDateString(),
-                    'theme' => $event->theme,
-                    'start_date_raw' => $event->start_date 
-                ];
-            });
+    // --- CARA 2: STRIPE ONLINE PAYMENT (FPX / KAD) ---
+    public function createPayment(Request $request) {
+        $request->validate([
+            'payment_id' => 'required' 
+        ]);
 
-        $allNotices = Event::latest()->paginate(5);
-        return view('parent.events', compact('upcomingEvents', 'allNotices'));
+        $payment = Payment::where('payment_id', $request->payment_id)->first();
+
+        if (!$payment) {
+            return back()->with('error', 'Ralat: Invois tidak dijumpai.');
+        }
+
+        Stripe::setApiKey(env('STRIPE_SECRET'));
+
+        $checkout_session = StripeSession::create([
+            'payment_method_types' => ['card', 'fpx'],
+            'line_items' => [[
+                'price_data' => [
+                    'currency' => 'myr',
+                    'product_data' => [
+                        'name' => $payment->title ?? 'Yuran Tabika',
+                        'description' => 'Yuran pelajar: ' . ($payment->student->student_name ?? 'Pelajar'),
+                    ],
+                    'unit_amount' => (int)($payment->amount * 100), // Stripe kira dalam sen
+                ],
+                'quantity' => 1,
+            ]],
+            'mode' => 'payment',
+            'success_url' => route('parent.payment.success') . '?session_id={CHECKOUT_SESSION_ID}',
+            'cancel_url' => route('parent.payment.cancel'),
+            'metadata' => [
+                'payment_id' => $payment->payment_id, 
+            ],
+        ]);
+
+        return redirect($checkout_session->url);
+    }
+
+    public function paymentSuccess(Request $request) {
+        Stripe::setApiKey(env('STRIPE_SECRET'));
+        $sessionId = $request->get('session_id');
+
+        try {
+            $session = StripeSession::retrieve($sessionId);
+            
+            if ($session->payment_status == 'paid') {
+                $paymentId = $session->metadata->payment_id;
+                
+                $payment = Payment::where('payment_id', $paymentId)->first();
+                
+                if ($payment) {
+                    $payment->update([
+                        'status' => 'Paid',
+                        'admin_remarks' => 'Telah dibayar melalui Stripe (FPX/Kad)'
+                    ]);
+                    
+                    return redirect()->route('parent.payment')->with('success', 'Alhamdulillah! Pembayaran anda telah berjaya.');
+                }
+            }
+        } catch (\Exception $e) {
+            return redirect()->route('parent.payment')->with('error', 'Ralat pengesahan dari Stripe. Sila hubungi admin.');
+        }
+
+        return redirect()->route('parent.payment')->with('warning', 'Pembayaran anda sedang diproses.');
+    }
+
+    public function paymentCancel() {
+        return redirect()->route('parent.payment')->with('error', 'Pembayaran telah dibatalkan.');
     }
 }

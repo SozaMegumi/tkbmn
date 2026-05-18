@@ -59,8 +59,9 @@
         <div class="col-md-4">
             <div class="card card-soft bg-white border border-light h-100 p-4 position-relative">
                 <span class="stat-label text-muted mb-2"><i class="bi bi-chat-dots-fill text-primary me-2"></i> Unread Messages</span>
-                <h1 class="display-amount text-dark mb-0">{{ $unreadMessages ?? 2 }}</h1>
-                <a href="#" class="stretched-link"></a> </div>
+                <h1 class="display-amount text-dark mb-0">{{ $unreadMessages ?? 0 }}</h1>
+                <a href="{{ route('teacher.communication') }}" class="stretched-link"></a> 
+            </div>
         </div>
     </div>
 
@@ -82,10 +83,10 @@
                                 </div>
                                 <div>
                                     <h6 class="fw-bold text-dark mb-1">Mark Daily Attendance</h6>
-                                    <p class="text-muted small mb-0">Please mark attendance for Kelas Mawar before 9:00 AM.</p>
+                                    <p class="text-muted small mb-0">Please mark attendance for {{ $assignedClass ?? 'your class' }} before 9:00 AM.</p>
                                 </div>
                             </div>
-                            <a href="#" class="btn btn-warning text-dark fw-bold rounded-pill px-4">Do it now</a>
+                            <a href="{{ route('teacher.attendance') }}" class="btn btn-warning text-dark fw-bold rounded-pill px-4 shadow-sm">Do it now</a>
                         </li>
                         @endif
 
@@ -94,16 +95,12 @@
                                 <div class="bg-info bg-opacity-10 text-info p-3 rounded-circle me-3">
                                     <i class="bi bi-journal-check fs-4"></i>
                                 </div>
-                                <div style="width: 250px;">
-                                    <h6 class="fw-bold text-dark mb-1">Mid-Year Hafazan Test</h6>
-                                    <p class="text-muted small mb-1">Deadline: 20 May 2026</p>
-                                    <div class="progress" style="height: 5px;">
-                                        <div class="progress-bar bg-info" style="width: 40%;"></div>
-                                    </div>
-                                    <small class="text-muted" style="font-size: 0.7rem;">10/25 Students Graded</small>
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-1">KSPK Student Grading</h6>
+                                    <p class="text-muted small mb-0">Update Tahap Penguasaan (1-6) marks for your students.</p>
                                 </div>
                             </div>
-                            <a href="#" class="btn btn-outline-info fw-bold rounded-pill px-4">Continue Grading</a>
+                            <a href="{{ route('teacher.grading') }}" class="btn btn-outline-info fw-bold rounded-pill px-4">Key-in Marks</a>
                         </li>
 
                     </ul>
@@ -118,31 +115,24 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush">
+                        
+                        @forelse($events ?? [] as $event)
                         <div class="list-group-item p-4 border-top border-bottom-0">
                             <div class="d-flex align-items-start">
                                 <div class="text-center me-3" style="min-width: 45px;">
-                                    <h4 class="mb-0 fw-bold text-danger">01</h4>
-                                    <small class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">May</small>
+                                    <h4 class="mb-0 fw-bold text-{{ $event->theme == 'danger' ? 'danger' : 'primary' }}">{{ \Carbon\Carbon::parse($event->start_date)->format('d') }}</h4>
+                                    <small class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">{{ \Carbon\Carbon::parse($event->start_date)->format('M') }}</small>
                                 </div>
                                 <div>
-                                    <h6 class="fw-bold text-dark mb-1">Hari Pekerja (Holiday)</h6>
-                                    <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill">School Closed</span>
+                                    <h6 class="fw-bold text-dark mb-1">{{ $event->title }}</h6>
+                                    <span class="badge bg-{{ $event->theme == 'danger' ? 'danger' : 'primary' }} bg-opacity-10 text-{{ $event->theme == 'danger' ? 'danger' : 'primary' }} rounded-pill">{{ $event->theme == 'danger' ? 'Holiday' : 'Event' }}</span>
                                 </div>
                             </div>
                         </div>
+                        @empty
+                        <div class="p-4 text-center text-muted small">No upcoming events.</div>
+                        @endforelse
 
-                        <div class="list-group-item p-4 border-top border-bottom-0">
-                            <div class="d-flex align-items-start">
-                                <div class="text-center me-3" style="min-width: 45px;">
-                                    <h4 class="mb-0 fw-bold text-primary">15</h4>
-                                    <small class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">Jun</small>
-                                </div>
-                                <div>
-                                    <h6 class="fw-bold text-dark mb-1">Sukaneka Tabika</h6>
-                                    <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill">Event</span>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>

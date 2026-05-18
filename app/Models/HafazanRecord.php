@@ -15,14 +15,12 @@ class HafazanRecord extends Model
     protected $fillable = [
         'student_id',
         'teacher_id',
-        'surah_name',
-        'juz_number',
-        'verse_range',
-        'fluency_level',
-        'tajweed_notes',
-        'date_recorded', 
+        'surah',
+        'verses',
+        'status',
+        'date_recorded',
+        'remarks'
     ];
-
     protected $casts = [
         'date_recorded' => 'date', 
     ];

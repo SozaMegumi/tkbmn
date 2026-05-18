@@ -79,7 +79,8 @@
                                         </td>
                                         <td>
                                             <select name="records[{{ $student->student_id }}][fluency_level]" class="form-select form-select-sm border-secondary-subtle fw-bold">
-                                                <option value="Lancar" class="text-success">Lancar</option>
+                                                <option value="Cemerlang" class="text-success">Cemerlang</option>
+                                                <option value="Baik" class="text-primary">Baik</option>
                                                 <option value="Sederhana" class="text-warning">Sederhana</option>
                                                 <option value="Lemah" class="text-danger">Lemah</option>
                                             </select>
@@ -117,10 +118,10 @@
                                 <tr>
                                     <th>Tarikh</th>
                                     <th>Nama Murid</th>
-                                    <th>Juz & Surah</th>
+                                    <th>Surah</th>
                                     <th>Ayat</th>
                                     <th>Tahap Kelancaran</th>
-                                    <th>Catatan Tajwid</th>
+                                    <th>Catatan Tajwid & Juz</th>
                                     <th class="text-end">Padam</th>
                                 </tr>
                             </thead>
@@ -130,24 +131,23 @@
                                     <td><span class="badge bg-light text-dark border"><i class="bi bi-calendar-event me-1"></i> {{ \Carbon\Carbon::parse($record->date_recorded)->format('d M Y') }}</span></td>
                                     <td class="fw-bold text-primary">{{ $record->student->student_name ?? 'Unknown' }}</td>
                                     <td>
-                                        <span class="fw-bold d-block">{{ $record->surah_name }}</span>
-                                        @if($record->juz_number) <small class="text-muted">Juzuk {{ $record->juz_number }}</small> @endif
+                                        <span class="fw-bold d-block">{{ $record->surah }}</span>
                                     </td>
-                                    <td>{{ $record->verse_range ?? 'Keseluruhan' }}</td>
+                                    <td>{{ $record->verses ?? 'Keseluruhan' }}</td>
                                     <td>
-                                        @if(in_array($record->fluency_level, ['Cemerlang', 'Sangat Lancar', 'Lancar']))
-                                            <span class="badge bg-success rounded-pill px-3">{{ $record->fluency_level }}</span>
-                                        @elseif(in_array($record->fluency_level, ['Baik', 'Sederhana']))
-                                            <span class="badge bg-warning text-dark rounded-pill px-3">{{ $record->fluency_level }}</span>
+                                        @if(in_array($record->status, ['Cemerlang', 'Baik']))
+                                            <span class="badge bg-success rounded-pill px-3">{{ $record->status }}</span>
+                                        @elseif($record->status == 'Sederhana')
+                                            <span class="badge bg-warning text-dark rounded-pill px-3">{{ $record->status }}</span>
                                         @else
-                                            <span class="badge bg-danger rounded-pill px-3">{{ $record->fluency_level }}</span>
+                                            <span class="badge bg-danger rounded-pill px-3">{{ $record->status }}</span>
                                         @endif
                                     </td>
-                                    <td class="text-muted small" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $record->tajweed_notes }}">
-                                        {{ $record->tajweed_notes ?? '-' }}
+                                    <td class="text-muted small" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $record->remarks }}">
+                                        {{ $record->remarks ?? '-' }}
                                     </td>
                                     <td class="text-end">
-                                        <form action="{{ route('teacher.hafazan.delete', $record->hafazan_id) }}" method="POST" onsubmit="return confirm('Padam rekod ini?');">
+                                        <form action="{{ route('teacher.hafazan.delete', $record->id) }}" method="POST" onsubmit="return confirm('Padam rekod ini?');">
                                             @csrf @method('DELETE')
                                             <button class="btn btn-sm btn-outline-danger rounded-circle"><i class="bi bi-trash"></i></button>
                                         </form>

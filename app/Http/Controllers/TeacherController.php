@@ -36,15 +36,18 @@ class TeacherController extends Controller
             $attendanceMarked = false;
             $unreadMessages = 0;
 
-            // FIX: Find the classroom where teacher_id matches this teacher
+            // Find the classroom where teacher_id matches this teacher
             $classroom = Classroom::where('teacher_id', $teacher->teacher_id)->first();
 
             if ($classroom) {
                 $assignedClass = $classroom->class_name;
                 $totalStudents = Student::where('class_id', $classroom->class_id)->count();
 
+                // Force to date string for exact matching so the dashboard button turns green
+                $todayString = Carbon::today('Asia/Kuala_Lumpur')->toDateString();
+
                 $attendanceMarked = Attendance::where('class_id', $classroom->class_id)
-                    ->whereDate('date', Carbon::today('Asia/Kuala_Lumpur'))
+                    ->where('date', $todayString)
                     ->exists();
             }
 
@@ -53,18 +56,27 @@ class TeacherController extends Controller
                 ->whereNull('read_at')
                 ->count();
 
+            // Fetch upcoming events for the sidebar/dashboard
+            $events = \App\Models\Event::where('start_date', '>=', now()->startOfDay())
+                       ->orderBy('start_date', 'asc')
+                       ->take(3)
+                       ->get();
+
         } catch (\Exception $e) {
             $assignedClass = 'System Error';
             $totalStudents = 0;
             $attendanceMarked = false;
             $unreadMessages = 0;
+            $events = [];
         }
 
         return view('teacher.dashboard', compact(
             'assignedClass', 
             'totalStudents', 
             'attendanceMarked', 
-            'unreadMessages'
+            'unreadMessages',
+            'events',
+            'classroom'
         ));
     }
 
@@ -80,7 +92,6 @@ class TeacherController extends Controller
         $selectedDate = $request->get('attendance_date', Carbon::today('Asia/Kuala_Lumpur')->toDateString());
         $students = [];
 
-        // FIX: Grab the class ID directly from the Classroom table
         $classroom = Classroom::where('teacher_id', $teacher->teacher_id)->first();
         $teacherClassId = $classroom ? $classroom->class_id : null;
 
@@ -167,7 +178,6 @@ class TeacherController extends Controller
         $teacher = Auth::guard('teacher')->user();
         if (!$teacher) return redirect()->route('login');
 
-        // FIX: Find the correct class for this teacher
         $classroom = Classroom::where('teacher_id', $teacher->teacher_id)->first();
         $classId = $classroom ? $classroom->class_id : null;
         
@@ -209,7 +219,6 @@ class TeacherController extends Controller
         $teacher = Auth::guard('teacher')->user();
         if (!$teacher) return redirect()->route('login');
 
-        // FIX: Find the correct class for this teacher
         $classroom = Classroom::where('teacher_id', $teacher->teacher_id)->first();
         $classId = $classroom ? $classroom->class_id : null;
         
@@ -291,7 +300,6 @@ class TeacherController extends Controller
         $teacher = Auth::guard('teacher')->user();
         $assessment = Assessment::findOrFail($assessment_id);
         
-        // FIX: Grab the students using the new classroom link
         $classroom = Classroom::where('teacher_id', $teacher->teacher_id)->first();
         $classId = $classroom ? $classroom->class_id : null;
         $students = $classId ? Student::where('class_id', $classId)->get() : collect();
@@ -330,20 +338,24 @@ class TeacherController extends Controller
         $request->validate([
             'student_id'    => 'required|exists:students,student_id',
             'surah_name'    => 'required|string|max:255',
-            'juz_number'    => 'nullable|integer|min:1|max:30',
             'verse_range'   => 'nullable|string|max:255',
             'fluency_level' => 'required|string', 
             'date'          => 'required|date'
         ]);
 
+        // Combine Juz Number into Remarks since DB doesn't have a juz_number column
+        $remarks = $request->tajweed_notes;
+        if (!empty($request->juz_number)) {
+            $remarks = "Juz " . $request->juz_number . ($remarks ? " - " . $remarks : "");
+        }
+
         HafazanRecord::create([
             'student_id'    => $request->student_id,
             'teacher_id'    => Auth::guard('teacher')->user()->teacher_id,
-            'surah_name'    => $request->surah_name,
-            'juz_number'    => $request->juz_number,
-            'verse_range'   => $request->verse_range,
-            'fluency_level' => $request->fluency_level,
-            'tajweed_notes' => $request->tajweed_notes,
+            'surah'         => $request->surah_name,      // Mapped to DB
+            'verses'        => $request->verse_range,     // Mapped to DB
+            'status'        => $request->fluency_level,   // Mapped to DB
+            'remarks'       => $remarks,                  // Mapped to DB
             'date_recorded' => $request->date,
         ]);
 
@@ -362,14 +374,20 @@ class TeacherController extends Controller
 
         foreach ($request->records as $studentId => $data) {
             if (!empty($data['surah_name'])) {
+                
+                // Combine Juz Number into Remarks
+                $remarks = $data['tajweed_notes'] ?? null;
+                if (!empty($data['juz_number'])) {
+                    $remarks = "Juz " . $data['juz_number'] . ($remarks ? " - " . $remarks : "");
+                }
+
                 HafazanRecord::create([
                     'student_id'    => $studentId,
                     'teacher_id'    => $teacherId,
-                    'surah_name'    => $data['surah_name'],
-                    'juz_number'    => $data['juz_number'] ?? null,
-                    'verse_range'   => $data['verse_range'] ?? null,
-                    'fluency_level' => $data['fluency_level'],
-                    'tajweed_notes' => $data['tajweed_notes'] ?? null,
+                    'surah'         => $data['surah_name'],      // Mapped to DB
+                    'verses'        => $data['verse_range'] ?? null, // Mapped to DB
+                    'status'        => $data['fluency_level'],   // Mapped to DB
+                    'remarks'       => $remarks,                 // Mapped to DB
                     'date_recorded' => $date
                 ]);
                 $count++;
@@ -433,7 +451,8 @@ class TeacherController extends Controller
             $attachmentPath = $request->file('attachment')->store('chat_attachments', 'public');
         }
 
-        if (!$request->message && !$attachmentPath) {
+        // FIX FOR CHAT ATTACHMENTS: Allow sending if there is NO text but there IS an attachment
+        if (empty($request->message) && !$attachmentPath) {
             return back()->with('error', 'Sila masukkan mesej atau muat naik fail.');
         }
 
@@ -442,11 +461,29 @@ class TeacherController extends Controller
             'sender_type'     => 'App\Models\Teacher',
             'receiver_id'     => $request->receiver_id,
             'receiver_type'   => 'App\Models\Guardian', 
-            'message_content' => $request->message,
+            
+            // DATABASE FIX: Pass empty string instead of NULL
+            'message_content' => $request->message ?? '', 
+            
             'attachment'      => $attachmentPath,
             'read_at'         => null
         ]);
 
         return back();
+    }
+    
+    // ==========================================
+    // EVENTS (READ-ONLY)
+    // ==========================================
+    public function events() {
+        $teacher = Auth::guard('teacher')->user(); 
+        if (!$teacher) return redirect()->route('login');
+
+        // Fetch all upcoming events, ordered by date
+        $events = \App\Models\Event::where('start_date', '>=', now()->startOfDay())
+                                  ->orderBy('start_date', 'asc')
+                                  ->get();
+
+        return view('teacher.events', compact('events'));
     }
 }

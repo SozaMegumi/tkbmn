@@ -225,7 +225,7 @@
                             <input type="file" name="attachment" class="d-none" id="fileInput" onchange="updateFileIcon()">
                         </label>
 
-                        <input type="text" name="message" class="chat-input" placeholder="Type a message..." autocomplete="off">
+                       <input type="text" name="message" class="chat-input" placeholder="Type a message..." autocomplete="off">
                         
                         <button type="submit" class="btn-send"><i class="bi bi-send-fill fs-6 ps-1"></i></button>
                     </form>

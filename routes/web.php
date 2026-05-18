@@ -7,6 +7,9 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\ParentController;
 use App\Http\Controllers\AuthController; 
+use App\Http\Controllers\LanguageController;
+
+Route::get('/lang/{locale}', [LanguageController::class, 'swap'])->name('lang.swap');
 
 // --- LOGIN & AUTHENTICATION ---
 Route::get('/', function () { 
@@ -115,12 +118,17 @@ Route::middleware('auth:teacher')->prefix('teacher')->name('teacher.')->group(fu
     Route::get('/report-cards', [TeacherController::class, 'reportCards'])->name('report-cards');
     Route::get('/report-cards/print/{assessment_id}', [TeacherController::class, 'printReportCards'])->name('report-cards.print');
 
+    // Communication Routes
     Route::get('/communication', [TeacherController::class, 'communication'])->name('communication');
     Route::post('/communication/send', [TeacherController::class, 'sendMessage'])->name('chat.send');
     
     // Hafazan Routes
     Route::get('/hafazan', [TeacherController::class, 'hafazan'])->name('hafazan'); 
-    Route::post('/hafazan/bulk-store', [TeacherController::class, 'storeHafazanBulk'])->name('hafazan.bulk_store'); // <--- ADDED THIS LINE
+   Route::post('/hafazan/bulk-store', [TeacherController::class, 'storeBulkHafazan'])->name('hafazan.bulk_store');
+   Route::delete('/hafazan/delete/{id}', [TeacherController::class, 'deleteHafazan'])->name('hafazan.delete');
+
+    // Events 
+    Route::get('/events', [TeacherController::class, 'events'])->name('events');
 });
 
 
@@ -135,9 +143,16 @@ Route::middleware('auth:parent')->prefix('parent')->name('parent.')->group(funct
     Route::get('/chat', [ParentController::class, 'chat'])->name('communication'); 
     Route::post('/chat/send', [ParentController::class, 'sendMessage'])->name('chat.send');
 
-    Route::get('/payment', [ParentController::class, 'payment'])->name('payment');
-    Route::post('/payment/upload', [ParentController::class, 'uploadReceipt'])->name('payment.upload');
-
+ // ==========================================
+    // PAYMENT & STRIPE ROUTES
+    // ==========================================
+    // Change name from 'parent.payment' to just 'payment'
+    Route::get('/payment', [App\Http\Controllers\ParentController::class, 'payment'])->name('payment'); 
+    Route::post('/payment/upload', [App\Http\Controllers\ParentController::class, 'uploadReceipt'])->name('payment.upload');
+    Route::post('/payment/stripe', [App\Http\Controllers\ParentController::class, 'createPayment'])->name('payment.pay');
+    Route::get('/payment/success', [App\Http\Controllers\ParentController::class, 'paymentSuccess'])->name('payment.success');
+    Route::get('/payment/cancel', [App\Http\Controllers\ParentController::class, 'paymentCancel'])->name('payment.cancel');
+   
     Route::get('/notices', [ParentController::class, 'notices'])->name('notices');
     Route::get('/events', [ParentController::class, 'events'])->name('events');
 });
