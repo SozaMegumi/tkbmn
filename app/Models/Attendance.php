@@ -17,7 +17,8 @@ class Attendance extends Model
         'class_id',
         'date',
         'status',
-        'reason', // 3. Changed 'remarks' to 'reason' to match your Controller/Form
+        'reason',
+        'attachment', 
     ];
 
     protected $casts = [

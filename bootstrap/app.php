@@ -11,20 +11,26 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-    $middleware->alias([
-        'auth' => \Illuminate\Auth\Middleware\Authenticate::class,
-    ]);
+        
+        // --- TAMBAH INI UNTUK SISTEM DWIBAHASA ---
+        $middleware->web(append: [
+            \App\Http\Middleware\SetLocale::class,
+        ]);
 
-    $middleware->redirectTo(
-        guests: '/login',
-        users: function ($request) {
-            if ($request->is('admin/*')) return route('admin.dashboard');
-            if ($request->is('teacher/*')) return route('teacher.dashboard');
-            if ($request->is('parent/*')) return route('parent.dashboard');
-            return '/';
-        }
-    );
-})
+        $middleware->alias([
+            'auth' => \Illuminate\Auth\Middleware\Authenticate::class,
+        ]);
+
+        $middleware->redirectTo(
+            guests: '/login',
+            users: function ($request) {
+                if ($request->is('admin/*')) return route('admin.dashboard');
+                if ($request->is('teacher/*')) return route('teacher.dashboard');
+                if ($request->is('parent/*')) return route('parent.dashboard');
+                return '/';
+            }
+        );
+    })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })->create();
