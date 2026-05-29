@@ -16,18 +16,18 @@
     
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h3 class="fw-bold text-dark mb-1">Penilaian KSPK</h3>
-            <p class="text-muted small mb-0">Sistem Pentaksiran Tabika Kemas (Pengisian Berkelompok)</p>
+            <h3 class="fw-bold text-dark mb-1">{{ __('messages.kspk_assessment') ?? 'Penilaian KSPK' }}</h3>
+            <p class="text-muted small mb-0">{{ __('messages.kspk_grading_desc') ?? 'Sistem Pentaksiran Tabika Kemas (Pengisian Berkelompok)' }}</p>
         </div>
         
         <a href="{{ route('teacher.report-cards') ?? '#' }}" class="btn btn-primary fw-bold shadow-sm rounded-pill px-4">
-            <i class="bi bi-file-earmark-pdf-fill me-2"></i> Jana Kad Laporan (Report Card)
+            <i class="bi bi-file-earmark-pdf-fill me-2"></i> {{ __('messages.generate_report_card') ?? 'Jana Kad Laporan' }}
         </a>
     </div>
 
     @if ($errors->any())
         <div class="alert alert-danger shadow-sm rounded-4" role="alert">
-            <h6 class="fw-bold mb-1"><i class="bi bi-exclamation-octagon-fill me-2"></i> Ralat Penyimpanan!</h6>
+            <h6 class="fw-bold mb-1"><i class="bi bi-exclamation-octagon-fill me-2"></i> {{ __('messages.save_error') ?? 'Ralat Penyimpanan!' }}</h6>
             <ul class="mb-0 small">
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
@@ -43,9 +43,9 @@
     <div class="card card-soft mb-4">
         <div class="card-body p-4 bg-light bg-gradient rounded-4 border border-light-subtle">
             <form action="{{ route('teacher.grading') }}" method="GET" class="d-flex align-items-center gap-3 flex-wrap">
-                <label class="fw-bold text-dark mb-0 whitespace-nowrap"><i class="bi bi-journal-check text-primary me-2"></i> Sesi Pentaksiran:</label>
+                <label class="fw-bold text-dark mb-0 whitespace-nowrap"><i class="bi bi-journal-check text-primary me-2"></i> {{ __('messages.assessment_session') ?? 'Sesi Pentaksiran:' }}</label>
                 <select name="assessment_id" class="form-select border-0 shadow-sm w-auto min-w-200" onchange="this.form.submit()" required>
-                    <option value="" disabled {{ !$selectedAssessmentId ? 'selected' : '' }}>-- Sila Pilih Pentaksiran --</option>
+                    <option value="" disabled {{ !$selectedAssessmentId ? 'selected' : '' }}>{{ __('messages.select_assessment') ?? '-- Sila Pilih Pentaksiran --' }}</option>
                     @foreach($assessments ?? [] as $assessment)
                         <option value="{{ $assessment->id }}" {{ $selectedAssessmentId == $assessment->id ? 'selected' : '' }}>
                             {{ $assessment->title ?? 'Pentaksiran' }}
@@ -60,13 +60,13 @@
         @if(empty($subjects) || count($subjects) == 0)
             <div class="alert alert-danger shadow-sm rounded-4 text-center p-4">
                 <i class="bi bi-x-circle-fill fs-1 d-block mb-2"></i>
-                <h5 class="fw-bold">Tiada Subjek Ditemui!</h5>
-                <p class="mb-0">Pangkalan data anda belum mempunyai sebarang subjek KSPK. Sila hubungi Admin.</p>
+                <h5 class="fw-bold">{{ __('messages.no_subjects_found') ?? 'Tiada Subjek Ditemui!' }}</h5>
+                <p class="mb-0">{{ __('messages.contact_admin_db') ?? 'Pangkalan data anda belum mempunyai sebarang subjek KSPK. Sila hubungi Admin.' }}</p>
             </div>
         @else
             <div class="card card-soft">
                 <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
-                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-table text-primary me-2"></i> Borang Pentaksiran Kelas</h5>
+                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-table text-primary me-2"></i> {{ __('messages.class_assessment_form') ?? 'Borang Pentaksiran Kelas' }}</h5>
                 </div>
                 <div class="card-body p-4">
                     
@@ -78,11 +78,11 @@
                             <table class="table table-bordered table-hover align-middle table-sm table-grading" style="min-width: 1200px;">
                                 <thead class="text-center align-middle">
                                     <tr>
-                                        <th rowspan="2" width="15%" class="text-start ps-3 align-middle text-dark">NAMA MURID</th>
+                                        <th rowspan="2" width="15%" class="text-start ps-3 align-middle text-dark">{{ __('messages.student_name') ?? 'NAMA MURID' }}</th>
                                         <th colspan="{{ count($subjects) }}" class="bg-primary bg-opacity-10 text-primary fw-bold">
-                                            TUNJANG KOMPONEN KSPK (TAHAP PENGUASAAN)
+                                            {{ __('messages.kspk_components') ?? 'TUNJANG KOMPONEN KSPK (TAHAP PENGUASAAN)' }}
                                         </th>
-                                        <th rowspan="2" width="18%" class="align-middle text-dark">ULASAN GURU</th>
+                                        <th rowspan="2" width="18%" class="align-middle text-dark">{{ __('messages.teacher_remarks') ?? 'ULASAN GURU' }}</th>
                                     </tr>
                                     <tr>
                                         @foreach($subjects as $subject)
@@ -116,11 +116,11 @@
                                         @endforeach
                                         
                                         <td class="p-1">
-                                            <input type="text" name="remarks[{{ $sId }}]" class="form-control form-control-sm border-secondary-subtle" style="font-size: 0.8rem;" placeholder="Catatan/Ulasan..." value="{{ $teacherRemarks[$sId] ?? '' }}">
+                                            <input type="text" name="remarks[{{ $sId }}]" class="form-control form-control-sm border-secondary-subtle" style="font-size: 0.8rem;" placeholder="{{ __('messages.remarks_placeholder') ?? 'Catatan/Ulasan...' }}" value="{{ $teacherRemarks[$sId] ?? '' }}">
                                         </td>
                                     </tr>
                                     @empty
-                                    <tr><td colspan="{{ count($subjects) + 2 }}" class="text-center py-5 text-muted">Tiada pelajar didaftarkan.</td></tr>
+                                    <tr><td colspan="{{ count($subjects) + 2 }}" class="text-center py-5 text-muted">{{ __('messages.no_students_registered') ?? 'Tiada pelajar didaftarkan.' }}</td></tr>
                                     @endforelse
                                 </tbody>
                             </table>
@@ -129,7 +129,7 @@
                         @if(count($students) > 0)
                         <div class="text-end mt-4">
                             <button type="submit" class="btn btn-success px-5 py-2 rounded-pill shadow-sm fw-bold">
-                                <i class="bi bi-save2-fill me-2"></i> Simpan Semua Pentaksiran
+                                <i class="bi bi-save2-fill me-2"></i> {{ __('messages.save_assessments') ?? 'Simpan Semua Pentaksiran' }}
                             </button>
                         </div>
                         @endif

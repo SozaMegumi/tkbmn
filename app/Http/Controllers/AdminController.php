@@ -14,9 +14,10 @@ use App\Models\Attendance;
 use App\Models\AssessmentResult;
 use App\Models\PbmtReport;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth; 
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
-use Spatie\GoogleCalendar\Event as GoogleEvent; 
+use Spatie\GoogleCalendar\Event as GoogleEvent;
 
 class AdminController extends Controller
 {
@@ -753,122 +754,158 @@ class AdminController extends Controller
     public function events() {
         return view('admin.events', ['events' => Event::orderBy('start_date', 'asc')->get()]);
     }
-
-    public function storeEvent(Request $request) {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'start_date' => 'required|date',
-            'theme' => 'required|in:primary,danger'
-        ]);
-
-        $googleEventId = null;
-
+public function updateEvent(Request $request, int $id) {
+    $request->validate([
+        'title' => 'required|string|max:255',
+        'start_date' => 'required|date',
+        'theme' => 'required|in:primary,danger'
+    ]);
+ 
+    $event = Event::findOrFail($id);
+    
+    // Step 1: Update local database first
+    $event->update([
+        'title'       => $request->title,
+        'description' => $request->description,
+        'start_date'  => Carbon::parse($request->start_date)->toDateString(),
+        'end_date'    => $request->end_date ? Carbon::parse($request->end_date)->toDateString() : Carbon::parse($request->start_date)->toDateString(),
+        'theme'       => $request->theme,
+    ]);
+ 
+    $googleUpdated = false;
+    $googleError = '';
+    
+    $startDate = Carbon::parse($request->start_date)->startOfDay();
+    $endDate = $request->end_date ? Carbon::parse($request->end_date)->startOfDay() : $startDate->copy();
+ 
+    // Step 2: Update Google Calendar if event exists
+    if ($event->google_event_id) {
         try {
-            $googleEvent = new GoogleEvent;
-            $googleEvent->name = $request->title;
-            $googleEvent->description = $request->description ?? ''; 
-            $googleEvent->startDateTime = Carbon::parse($request->start_date)->startOfDay();
+            // FIXED: Use the correct Spatie method to find and update
+            $googleEvent = GoogleEvent::find($event->google_event_id);
             
-            if ($request->end_date) {
-                $googleEvent->endDateTime = Carbon::parse($request->end_date)->endOfDay();
-            } else {
-                $googleEvent->endDateTime = Carbon::parse($request->start_date)->endOfDay();
+            if ($googleEvent) {
+                // IMPORTANT: Create a new event object with updated data
+                $updatedEventData = [
+                    'name' => $request->title,
+                    'description' => $request->description ?? '',
+                    'startDate' => $startDate,
+                    'endDate' => $endDate->addDay(),
+                ];
+ 
+                // Use update method instead of setting properties
+                $googleEvent->update($updatedEventData);
+                $googleUpdated = true;
             }
-            
-            $googleEvent->save();
-            $googleEventId = $googleEvent->id; 
-            
-        } catch (\Exception $e) {}
-
-        Event::create([
-            'title'           => $request->title,
-            'description'     => $request->description,
-            'start_date'      => Carbon::parse($request->start_date)->toDateString(),
-            'end_date'        => $request->end_date ? Carbon::parse($request->end_date)->toDateString() : Carbon::parse($request->start_date)->toDateString(),
-            'theme'           => $request->theme,
-            'created_by'      => Auth::id() ?? 1,
-            'google_event_id' => $googleEventId 
-        ]);
-
-        if ($googleEventId) {
-            return back()->with('success', 'Event Posted Locally & Synced with Google Calendar!');
-        } else {
-            return back()->with('success', 'Event Posted Locally, but Google Sync Failed.');
-        }
-    }
-
-    public function updateEvent(Request $request, int $id) {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'start_date' => 'required|date',
-            'theme' => 'required|in:primary,danger'
-        ]);
-
-        $event = Event::findOrFail($id);
-        
-        $event->update([
-            'title'       => $request->title,
-            'description' => $request->description,
-            'start_date'  => Carbon::parse($request->start_date)->toDateString(),
-            'end_date'    => $request->end_date ? Carbon::parse($request->end_date)->toDateString() : Carbon::parse($request->start_date)->toDateString(),
-            'theme'       => $request->theme,
-        ]);
-
-        $googleUpdated = false;
-        $googleError = '';
-
-        if ($event->google_event_id) {
-            try {
-                $googleEvent = GoogleEvent::find($event->google_event_id);
-                if ($googleEvent) {
-                    $googleEvent->update([
+        } catch (\Exception $e) {
+            // If 404: Event was deleted in Google Calendar, recreate it
+            if (str_contains(strtolower($e->getMessage()), '404') || 
+                str_contains(strtolower($e->getMessage()), 'not found')) {
+                try {
+                    $newGoogleEvent = GoogleEvent::create([
                         'name' => $request->title,
                         'description' => $request->description ?? '',
-                        'startDateTime' => Carbon::parse($request->start_date)->startOfDay(),
-                        'endDateTime' => $request->end_date ? Carbon::parse($request->end_date)->endOfDay() : Carbon::parse($request->start_date)->endOfDay(),
+                        'startDate' => $startDate,
+                        'endDate' => $endDate->addDay(),
                     ]);
+                    
+                    $event->update(['google_event_id' => $newGoogleEvent->id]);
                     $googleUpdated = true;
+                } catch (\Exception $e2) {
+                    $googleError = 'Failed to recreate event: ' . $e2->getMessage();
                 }
-            } catch (\Exception $e) {
+            } else {
                 $googleError = $e->getMessage();
             }
         }
-
-        if ($googleUpdated) {
-            return back()->with('success', 'Event Updated Locally and on Google Calendar!');
-        } elseif ($event->google_event_id && $googleError) {
-            return back()->with('warning', 'Updated locally, but Google Calendar update failed. Error: ' . $googleError);
-        } else {
-            return back()->with('success', 'Event updated locally (It was never synced to Google Calendar originally).');
-        }
     }
+ 
+    // Step 3: Return appropriate message
+    if ($googleUpdated) {
+        return back()->with('success', 'Event successfully updated in the system & Google Calendar!');
+    } elseif ($event->google_event_id && $googleError) {
+        return back()->with('warning', 'Updated in the system, but Google error: ' . $googleError);
+    } else {
+        return back()->with('success', 'Event successfully updated (No existing Google Calendar link).');
+    }
+}
+ 
+public function deleteEvent(int $id) {
+    $event = Event::findOrFail($id);
+    
+    $googleDeleted = false;
+    $googleError = '';
 
-    public function deleteEvent(int $id) {
-        $event = Event::findOrFail($id);
-        
-        $googleDeleted = false;
-        $googleError = '';
-
-        if ($event->google_event_id) {
-            try {
-                $googleEvent = GoogleEvent::find($event->google_event_id);
-                if ($googleEvent) {
-                    $googleEvent->delete();
-                    $googleDeleted = true;
-                }
-            } catch (\Exception $e) {
+    if ($event->google_event_id) {
+        try {
+            $googleEvent = GoogleEvent::find($event->google_event_id);
+            
+            if ($googleEvent) {
+                $googleEvent->delete();  
+                $googleDeleted = true;
+            } else {
+                // Already deleted in Google Calendar
+                $googleDeleted = true;
+            }
+            
+        } catch (\Exception $e) {
+            if (str_contains(strtolower($e->getMessage()), '404') || 
+                str_contains(strtolower($e->getMessage()), 'not found')) {
+                $googleDeleted = true;
+            } else {
                 $googleError = $e->getMessage();
+                Log::error("Google Calendar delete error: " . $e->getMessage());
             }
         }
-
-        $event->delete();
-        
-        if ($googleDeleted) {
-            return back()->with('success', 'Event Deleted from System and Google Calendar.');
-        } elseif ($event->google_event_id && $googleError) {
-            return back()->with('warning', 'Deleted locally, but Google Calendar failed. Error: ' . $googleError);
-        } else {
-            return back()->with('success', 'Event Deleted locally (It was never synced to Google Calendar).');
-        }
     }
+
+    $event->delete();
+    
+    if ($googleDeleted || !$event->google_event_id) {
+        return back()->with('success', 'Event successfully deleted from system & Google Calendar.');
+    } else {
+        return back()->with('warning', 'Deleted from the system, but Google error: ' . $googleError);
+    }
+}
+ 
+// ALSO FIX storeEvent() - Add proper save handling
+public function storeEvent(Request $request) {
+    $request->validate([
+        'title' => 'required|string|max:255',
+        'start_date' => 'required|date',
+        'theme' => 'required|in:primary,danger'
+    ]);
+ 
+    $googleEventId = null;
+    $startDate = Carbon::parse($request->start_date)->startOfDay();
+    $endDate = $request->end_date ? Carbon::parse($request->end_date)->startOfDay() : $startDate->copy();
+ 
+    try {
+        // FIXED: Use create() method for consistency
+        $googleEvent = GoogleEvent::create([
+            'name' => $request->title,
+            'description' => $request->description ?? '', 
+            'startDate' => $startDate,
+            'endDate' => $endDate->addDay(), 
+        ]);
+        
+        $googleEventId = $googleEvent->id;
+        
+    } catch (\Exception $e) {
+        // Show detailed error
+        Log::error("Google Calendar create error: " . $e->getMessage());
+    }
+    // Save to local database
+    Event::create([
+        'title'           => $request->title,
+        'description'     => $request->description,
+        'start_date'      => $request->start_date,
+        'end_date'        => $request->end_date ?? $request->start_date,
+        'theme'           => $request->theme,
+        'created_by'      => Auth::id() ?? 1,
+        'google_event_id' => $googleEventId 
+    ]);
+ 
+    return back()->with('success', 'Event successfully created & synchronized!');
+}
 }

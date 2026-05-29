@@ -654,4 +654,20 @@ return [
     'no_parents_found'          => 'Tiada ibu bapa ditemui.',
     'select_a_parent'           => 'Pilih Ibu Bapa',
     'choose_parent_sidebar'     => 'Pilih ibu bapa dari panel sisi untuk mula bersembang.',
+    'record_daily_logs'         => 'Rekod Aktiviti Harian',
+    'kspk_grading_desc'           => 'Masukkan tahap penguasaan KSPK (1-perlu bimbingan 2-sederhana 3-cemerlang) bagi setiap murid untuk sesi pentaksiran yang dipilih. Pastikan untuk menyimpan selepas memasukkan semua markah.',
+    'kspk_assessment'             => 'Penilaian KSPK',
+    'assessment_session'          => 'Sesi Pentaksiran:',
+    'select_assessment'           => '-- Sila Pilih Pentaksiran --',
+    'assessment_session_active'   => 'Sesi Pentaksiran Aktif',
+    'class_assessment_form'       => 'Borang Pentaksiran Kelas',
+    'teacher_remarks'             => 'Ulasan Guru',
+    'remarks_placeholder'         => 'Catatan/Ulasan...',
+    'save_assessment'             => 'Simpan Pentaksiran',
+    'generate_report_card'        => 'Jana Kad Laporan',
+    'kspk_component'              => 'Komponen KSPK',
+    'mastery_level'               => 'Tahap Penguasaan',
+    'kspk_components'             => 'Komponen KSPK (Tahap Penguasaan)',
+    'save_assessments'            => 'Simpan Semua Pentaksiran'
+
 ];
