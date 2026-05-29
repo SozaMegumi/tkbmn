@@ -142,7 +142,7 @@ class TeacherController extends Controller
             );
         }
 
-        return back()->with('success', 'Attendance & Documents updated successfully!');
+        return back()->with('success', 'Kehadiran dan Dokumen berjaya dikemas kini!');
     }
 
     public function printAttendance(Request $request) {
@@ -209,7 +209,7 @@ class TeacherController extends Controller
                 );
             }
         }
-        return back()->with('success', 'Daily logs saved successfully for ' . $date . '!');
+        return back()->with('success', 'Aktiviti harian untuk tarikh ' . $date . ' berjaya disimpan!');
     }
 
     // ==========================================
@@ -234,7 +234,7 @@ class TeacherController extends Controller
 
         if ($selectedAssessmentId) {
             $allResults = AssessmentResult::where('assessment_id', $selectedAssessmentId)
-                ->whereIn('student_id', $students->pluck('student_id'))
+                ->whereIn('student_id', $students->pluck('student_id')->toArray() ?: $students->pluck('id')->toArray())
                 ->get();
                 
             foreach ($allResults as $res) {
@@ -284,43 +284,62 @@ class TeacherController extends Controller
         if ($count > 0) {
             return back()->with('success', 'Penilaian KSPK berjaya disimpan secara berkelompok!');
         } else {
-            return back()->with('warning', 'Tiada penilaian disimpan. Sila pastikan sekurang-kurangnya satu gred dipilih.');
+            return back()->with('warning', 'Tiada penilaian disimpan. Sila pastikan sekurang-kurangnya satu gred diisi.');
         }
     }
 
-   public function reportCards()
-{
-    $teacher = auth()->guard('teacher')->user();
-    
-    // Cari kelas yang diajar oleh guru ini
-    $classroom = \App\Models\Classroom::where('teacher_id', $teacher->teacher_id)->first();
-    
-    // Dapatkan senarai murid dalam kelas tersebut
-    $students = $classroom ? \App\Models\Student::where('class_id', $classroom->class_id)->get() : collect();
-    
-    // Dapatkan senarai sesi pentaksiran
-    $assessments = \App\Models\Assessment::all();
+    // ==========================================
+    // REPORT CARDS (MENGGUNAKAN VIEW CETAKAN HTML)
+    // ==========================================
+    public function reportCards()
+    {
+        $teacher = auth()->guard('teacher')->user();
+        
+        // Cari kelas yang diajar oleh guru ini
+        $classroom = \App\Models\Classroom::where('teacher_id', $teacher->teacher_id)->first();
+        
+        // Dapatkan senarai murid dalam kelas tersebut
+        $students = $classroom ? \App\Models\Student::where('class_id', $classroom->class_id)->get() : collect();
+        
+        // Dapatkan senarai sesi pentaksiran
+        $assessments = \App\Models\Assessment::all();
 
-    // Hantar data ke fail view teacher/report-cards.blade.php
-    return view('teacher.report-cards', compact('students', 'assessments'));
-}
+        // Hantar data ke fail view teacher/report-cards.blade.php
+        return view('teacher.report-cards', compact('students', 'assessments'));
+    }
 
+    // CETAK KAD LAPORAN (HTML Print View)
     public function printReportCards($assessment_id) {
         $teacher = Auth::guard('teacher')->user();
         $assessment = Assessment::findOrFail($assessment_id);
+        $subjects = Subject::all();
         
         $classroom = Classroom::where('teacher_id', $teacher->teacher_id)->first();
         $classId = $classroom ? $classroom->class_id : null;
         $students = $classId ? Student::where('class_id', $classId)->get() : collect();
 
-        $allResults = AssessmentResult::with('subject')
-            ->whereIn('student_id', $students->pluck('student_id'))
-            ->where('assessment_id', $assessment_id)
-            ->get()
-            ->groupBy('student_id');
+        // Dapatkan Markah (Grades)
+        $results = [];
+        $teacherRemarks = [];
+        
+        $records = AssessmentResult::where('assessment_id', $assessment_id)
+                    ->whereIn('student_id', $students->pluck('student_id')->toArray() ?? $students->pluck('id')->toArray())
+                    ->get();
 
-        $pdf = Pdf::loadView('reports.kspk-class-report', compact('students', 'assessment', 'allResults'));
-        return $pdf->stream('Class_Report_Cards_'.$assessment->name.'.pdf');
+        foreach($records as $r) {
+            $sId = $r->student_id;
+            $subId = $r->subject_id;
+            $results[$sId][$subId] = $r->mastery_level ?? $r->grade; // Sokong kedua-dua column DB
+            
+            if(!empty($r->teacher_remarks ?? $r->remarks)) {
+                $teacherRemarks[$sId] = $r->teacher_remarks ?? $r->remarks;
+            }
+        }
+
+        // Paparkan View Print HTML Borang KEMAS
+        return view('teacher.report-cards-print', compact(
+            'students', 'assessment', 'subjects', 'results', 'teacherRemarks', 'classroom'
+        ));
     }
 
     // ==========================================
@@ -361,10 +380,10 @@ class TeacherController extends Controller
         HafazanRecord::create([
             'student_id'    => $request->student_id,
             'teacher_id'    => Auth::guard('teacher')->user()->teacher_id,
-            'surah'         => $request->surah_name,      // Mapped to DB
-            'verses'        => $request->verse_range,     // Mapped to DB
-            'status'        => $request->fluency_level,   // Mapped to DB
-            'remarks'       => $remarks,                  // Mapped to DB
+            'surah'         => $request->surah_name,      
+            'verses'        => $request->verse_range,     
+            'status'        => $request->fluency_level,   
+            'remarks'       => $remarks,                  
             'date_recorded' => $request->date,
         ]);
 
@@ -393,10 +412,10 @@ class TeacherController extends Controller
                 HafazanRecord::create([
                     'student_id'    => $studentId,
                     'teacher_id'    => $teacherId,
-                    'surah'         => $data['surah_name'],      // Mapped to DB
-                    'verses'        => $data['verse_range'] ?? null, // Mapped to DB
-                    'status'        => $data['fluency_level'],   // Mapped to DB
-                    'remarks'       => $remarks,                 // Mapped to DB
+                    'surah'         => $data['surah_name'],      
+                    'verses'        => $data['verse_range'] ?? null, 
+                    'status'        => $data['fluency_level'],   
+                    'remarks'       => $remarks,                 
                     'date_recorded' => $date
                 ]);
                 $count++;
@@ -460,7 +479,6 @@ class TeacherController extends Controller
             $attachmentPath = $request->file('attachment')->store('chat_attachments', 'public');
         }
 
-        // FIX FOR CHAT ATTACHMENTS: Allow sending if there is NO text but there IS an attachment
         if (empty($request->message) && !$attachmentPath) {
             return back()->with('error', 'Sila masukkan mesej atau muat naik fail.');
         }
@@ -470,10 +488,7 @@ class TeacherController extends Controller
             'sender_type'     => 'App\Models\Teacher',
             'receiver_id'     => $request->receiver_id,
             'receiver_type'   => 'App\Models\Guardian', 
-            
-            // DATABASE FIX: Pass empty string instead of NULL
             'message_content' => $request->message ?? '', 
-            
             'attachment'      => $attachmentPath,
             'read_at'         => null
         ]);
@@ -495,6 +510,4 @@ class TeacherController extends Controller
 
         return view('teacher.events', compact('events'));
     }
-
-
 }

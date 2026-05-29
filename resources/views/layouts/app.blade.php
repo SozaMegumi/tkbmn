@@ -174,10 +174,9 @@
                 <li class="nav-item"><a class="nav-link {{ request()->routeIs('teacher.grading*') ? 'active' : '' }}" href="{{ route('teacher.grading') }}"><i class="bi bi-mortarboard-fill"></i> {{ __('messages.grading') }}</a></li>
                 <li class="nav-item">
    <li class="nav-item">
-    <a class="nav-link {{ request()->routeIs('teacher.report-cards.*') ? 'active' : '' }}" 
-       href="{{ \Illuminate\Support\Facades\Route::has('teacher.report-cards.index') ? route('teacher.report-cards.index') : '#' }}">
-        <i class="bi bi-file-earmark-pdf-fill"></i>
-        <span>{{ __('messages.academic_report_cards') ?? 'Report Cards' }}</span>
+    <a class="nav-link {{ request()->routeIs('teacher.daily-logs*') ? 'active' : '' }}" href="{{ route('teacher.daily-logs') }}">
+        <i class="bi bi-journal-richtext"></i>
+        <span>{{ __('messages.daily_student_logs') ?? 'Aktiviti Harian Murid' }}</span>
     </a>
 </li>
                 <li class="nav-item">
