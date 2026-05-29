@@ -5,8 +5,8 @@
     
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h3 class="fw-bold text-dark mb-1">Admin Reports & Analytics</h3>
-            <p class="text-muted small mb-0">Overview of school performance and statistics.</p>
+            <h3 class="fw-bold text-dark mb-1">{{ __('messages.reports_analytics_title') }}</h3>
+            <p class="text-muted small mb-0">{{ __('messages.reports_analytics_desc') }}</p>
         </div>
     </div>
 
@@ -15,7 +15,7 @@
         <div class="col-lg-7">
             <div class="card border-0 shadow-sm rounded-4 h-100">
                 <div class="card-header bg-white border-0 pt-4 px-4">
-                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-graph-up-arrow text-primary me-2"></i> Trend Kehadiran (Last 7 Days)</h5>
+                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-graph-up-arrow text-primary me-2"></i> {{ __('messages.attendance_trend_7_days') }}</h5>
                 </div>
                 <div class="card-body p-4">
                     <div style="height: 300px; position: relative;">
@@ -28,7 +28,7 @@
         <div class="col-lg-5">
             <div class="card border-0 shadow-sm rounded-4 h-100">
                 <div class="card-header bg-white border-0 pt-4 px-4">
-                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-trophy-fill text-warning me-2"></i> Pencapaian KSPK (Mastery Levels)</h5>
+                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-trophy-fill text-warning me-2"></i> {{ __('messages.kspk_mastery_levels') }}</h5>
                 </div>
                 <div class="card-body p-4">
                     <div style="height: 300px; position: relative;">
@@ -45,7 +45,7 @@
             <div class="card border-0 shadow-sm rounded-4 bg-primary text-white h-100">
                 <div class="card-body p-4 d-flex flex-column justify-content-center align-items-center text-center">
                     <i class="bi bi-cash-stack fs-1 mb-2 opacity-75"></i>
-                    <h6 class="fw-bold mb-1">Total Income (All Time)</h6>
+                    <h6 class="fw-bold mb-1">{{ __('messages.total_income_all_time') }}</h6>
                     <h2 class="fw-bold mb-0">RM {{ number_format($stats['total_income'] ?? 0, 2) }}</h2>
                 </div>
             </div>
@@ -54,7 +54,7 @@
         <div class="col-lg-8">
             <div class="card border-0 shadow-sm rounded-4 h-100">
                 <div class="card-header bg-white border-0 pt-4 px-4">
-                    <h6 class="fw-bold text-dark mb-0">Kapasiti Murid Mengikut Kelas (Class Enrollment)</h6>
+                    <h6 class="fw-bold text-dark mb-0">{{ __('messages.class_enrollment_capacity') }}</h6>
                 </div>
                 <div class="card-body p-4">
                     <div style="height: 200px; position: relative;">
@@ -65,7 +65,7 @@
         </div>
     </div>
 
-    <h4 class="fw-bold text-dark mb-3"><i class="bi bi-file-earmark-pdf-fill text-danger me-2"></i> Penjanaan Laporan PBMT</h4>
+    <h4 class="fw-bold text-dark mb-3"><i class="bi bi-file-earmark-pdf-fill text-danger me-2"></i> {{ __('messages.pbmt_report_generation') }}</h4>
     
     <div class="row g-4">
         <div class="col-md-3">
@@ -74,9 +74,9 @@
                     <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
                         <i class="bi bi-calendar3 fs-3"></i>
                     </div>
-                    <h6 class="fw-bold text-dark">Takwim Sesi Persekolahan</h6>
-                    <p class="text-muted small">Jana jadual operasi tahunan tabika.</p>
-                    <a href="{{ route('admin.reports.takwim') }}" class="btn btn-outline-primary btn-sm rounded-pill mt-2 px-4">Jana Laporan</a>
+                    <h6 class="fw-bold text-dark">{{ __('messages.school_session_calendar') }}</h6>
+                    <p class="text-muted small">{{ __('messages.generate_annual_calendar') }}</p>
+                    <a href="{{ route('admin.reports.takwim') }}" class="btn btn-outline-primary btn-sm rounded-pill mt-2 px-4">{{ __('messages.generate_report') }}</a>
                 </div>
             </div>
         </div>
@@ -87,9 +87,9 @@
                     <div class="bg-success bg-opacity-10 text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
                         <i class="bi bi-calculator fs-3"></i>
                     </div>
-                    <h6 class="fw-bold text-dark">Unjuran Permohonan</h6>
-                    <p class="text-muted small">Jana unjuran peruntukan kewangan.</p>
-                    <a href="{{ route('admin.reports.unjuran') }}" class="btn btn-outline-success btn-sm rounded-pill mt-2 px-4">Jana Laporan</a>
+                    <h6 class="fw-bold text-dark">{{ __('messages.application_projection') }}</h6>
+                    <p class="text-muted small">{{ __('messages.generate_financial_projection') }}</p>
+                    <a href="{{ route('admin.reports.unjuran') }}" class="btn btn-outline-success btn-sm rounded-pill mt-2 px-4">{{ __('messages.generate_report') }}</a>
                 </div>
             </div>
         </div>
@@ -100,9 +100,9 @@
                     <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
                         <i class="bi bi-clipboard-data fs-3"></i>
                     </div>
-                    <h6 class="fw-bold text-dark">Rumusan Berkelompok</h6>
-                    <p class="text-muted small">Rumusan tuntutan bagi pelbagai cawangan.</p>
-                    <a href="{{ route('admin.reports.berkelompok') }}" class="btn btn-outline-warning btn-sm rounded-pill mt-2 px-4">Jana Laporan</a>
+                    <h6 class="fw-bold text-dark">{{ __('messages.group_summary') }}</h6>
+                    <p class="text-muted small">{{ __('messages.summary_of_claims') }}</p>
+                    <a href="{{ route('admin.reports.berkelompok') }}" class="btn btn-outline-warning btn-sm rounded-pill mt-2 px-4">{{ __('messages.generate_report') }}</a>
                 </div>
             </div>
         </div>
@@ -113,9 +113,9 @@
                     <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
                         <i class="bi bi-pie-chart fs-3"></i>
                     </div>
-                    <h6 class="fw-bold text-dark">Prestasi Perbelanjaan</h6>
-                    <p class="text-muted small">Pemantauan baki dan prestasi belanja.</p>
-                    <a href="{{ route('admin.reports.prestasi') }}" class="btn btn-outline-danger btn-sm rounded-pill mt-2 px-4">Jana Laporan</a>
+                    <h6 class="fw-bold text-dark">{{ __('messages.expenditure_performance') }}</h6>
+                    <p class="text-muted small">{{ __('messages.monitor_balance_expenditure') }}</p>
+                    <a href="{{ route('admin.reports.prestasi') }}" class="btn btn-outline-danger btn-sm rounded-pill mt-2 px-4">{{ __('messages.generate_report') }}</a>
                 </div>
             </div>
         </div>
@@ -140,7 +140,7 @@
                 data: {
                     labels: {!! json_encode($attendanceTrendLabels) !!},
                     datasets: [{
-                        label: 'Jumlah Kehadiran (Hadir)',
+                        label: '{{ __('messages.total_attendance_present') }}',
                         data: {!! json_encode($attendanceTrendValues) !!},
                         borderColor: '#4f46e5', // Indigo color
                         backgroundColor: 'rgba(79, 70, 229, 0.1)', // Light indigo fill
@@ -177,7 +177,7 @@
                 data: {
                     labels: {!! json_encode($academicLabels) !!},
                     datasets: [{
-                        label: 'Bilangan Murid',
+                        label: '{{ __('messages.number_of_students') }}',
                         data: {!! json_encode($academicValues) !!},
                         backgroundColor: [
                             'rgba(239, 68, 68, 0.8)',   // Red
@@ -211,7 +211,7 @@
                 data: {
                     labels: {!! json_encode($classLabels) !!},
                     datasets: [{
-                        label: 'Jumlah Murid Berdaftar',
+                        label: '{{ __('messages.total_registered_students') }}',
                         data: {!! json_encode($classValues) !!},
                         backgroundColor: '#0dcaf0',
                         borderRadius: 6,

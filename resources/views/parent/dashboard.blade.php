@@ -13,7 +13,6 @@
 
 @php
     $totalFees = $pendingPayments->sum('amount');
-    
     $totalChildren = $children->count();
     $presentCount = $attendances->where('status', 'Hadir')->count();
     $attendancePerc = $totalChildren > 0 ? round(($presentCount / $totalChildren) * 100) : 0;
@@ -33,11 +32,10 @@
 @endphp
 
 <div class="container-fluid pb-5">
-    
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h3 class="fw-bold text-dark mb-1">Selamat Datang, {{ strtoupper(Auth::guard('parent')->user()->parent_name) }}!</h3>
-            <p class="text-muted small mb-0">Papan Pemuka Utama (Overview for <span class="fw-bold text-primary">{{ strtoupper($children->pluck('student_name')->join(', ') ?: 'Child') }}</span>)</p>
+            <h3 class="fw-bold text-dark mb-1">{{ __('messages.welcome_parent', ['name' => strtoupper(auth()->guard('parent')->user()->parent_name)]) }}</h3>
+            <p class="text-muted small mb-0">{{ __('messages.overview_for', ['names' => strtoupper($children->pluck('student_name')->join(', ') ?: 'Child')]) }}</p>
         </div>
         <span class="badge bg-white text-secondary border px-3 py-2 rounded-pill shadow-sm">{{ \Carbon\Carbon::parse($today)->format('d M Y') }}</span>
     </div>
@@ -49,14 +47,14 @@
                     <div class="d-flex align-items-center mb-3">
                         <div class="icon-box bg-danger bg-opacity-10 text-danger me-3"><i class="bi bi-wallet2"></i></div>
                         <div>
-                            <small class="text-muted text-uppercase fw-bold">Yuran Tertunggak (Outstanding Fees)</small>
+                            <small class="text-muted text-uppercase fw-bold">{{ __('messages.outstanding_fees') }}</small>
                             <h2 class="fw-bold text-dark mb-0">RM {{ number_format($totalFees, 2) }}</h2>
                         </div>
                     </div>
                     @if($totalFees > 0)
-                        <a href="{{ route('parent.payment') }}" class="btn btn-danger w-100 rounded-pill fw-bold">Bayar Sekarang</a>
+                        <a href="{{ route('parent.payment') }}" class="btn btn-danger w-100 rounded-pill fw-bold">{{ __('messages.pay_now') }}</a>
                     @else
-                        <button class="btn btn-success w-100 rounded-pill fw-bold" disabled><i class="bi bi-check-circle me-1"></i> Telah Dibayar (All Paid)</button>
+                        <button class="btn btn-success w-100 rounded-pill fw-bold" disabled><i class="bi bi-check-circle me-1"></i> {{ __('messages.all_paid') }}</button>
                     @endif
                 </div>
             </div>
@@ -68,12 +66,12 @@
                     <div class="d-flex align-items-center mb-3">
                         <div class="icon-box bg-success bg-opacity-10 text-success me-3"><i class="bi bi-calendar-check"></i></div>
                         <div>
-                            <small class="text-muted text-uppercase fw-bold">Kehadiran Hari Ini (Today's Attendance)</small>
+                            <small class="text-muted text-uppercase fw-bold">{{ __('messages.todays_attendance') }}</small>
                             <h2 class="fw-bold text-dark mb-0">{{ $attendancePerc }}%</h2>
                         </div>
                     </div>
                     <div class="progress" style="height: 6px;"><div class="progress-bar bg-success" style="width: {{ $attendancePerc }}%"></div></div>
-                    <small class="text-muted mt-2 d-block">{{ $presentCount }} daripada {{ $totalChildren }} anak hadir hari ini</small>
+                    <small class="text-muted mt-2 d-block">{{ __('messages.attendance_summary', ['present' => $presentCount, 'total' => $totalChildren]) }}</small>
                 </div>
             </div>
         </div>
@@ -86,12 +84,12 @@
                             {{ substr($firstStudent->student_name ?? 'S', 0, 2) }}
                         </div>
                         <div>
-                            <small class="text-white-50 text-uppercase fw-bold">Profil Guru (Teacher Profile)</small>
-                            <h5 class="fw-bold mb-0 mt-1">{{ $teacher->full_name ?? 'Belum Ditetapkan' }}</h5>
-                            <small class="text-light"><i class="bi bi-door-open-fill"></i> {{ $firstStudent->classroom->class_name ?? 'Tiada Kelas' }}</small>
+                            <small class="text-white-50 text-uppercase fw-bold">{{ __('messages.teacher_profile') }}</small>
+                            <h5 class="fw-bold mb-0 mt-1">{{ $teacher->full_name ?? __('messages.not_assigned') }}</h5>
+                            <small class="text-light"><i class="bi bi-door-open-fill"></i> {{ $firstStudent->classroom->class_name ?? __('messages.no_class') }}</small>
                         </div>
                     </div>
-                    <div class="mt-3"><a href="{{ route('parent.communication') }}" class="btn btn-outline-light btn-sm rounded-pill w-100 fw-bold">Mesej Guru</a></div>
+                    <div class="mt-3"><a href="{{ route('parent.communication') }}" class="btn btn-outline-light btn-sm rounded-pill w-100 fw-bold">{{ __('messages.message_teacher') }}</a></div>
                 </div>
             </div>
         </div>
@@ -100,21 +98,21 @@
     <div class="row g-4 mb-4">
         <div class="col-lg-7">
             <div class="card card-dashboard h-100">
-                <div class="card-header bg-white border-0 pt-4 px-4"><h5 class="fw-bold text-dark mb-0"><i class="bi bi-megaphone me-2 text-primary"></i> Papan Notis (Notice Board)</h5></div>
+                <div class="card-header bg-white border-0 pt-4 px-4"><h5 class="fw-bold text-dark mb-0"><i class="bi bi-megaphone me-2 text-primary"></i> {{ __('messages.notice_board') }}</h5></div>
                 <div class="card-body px-4">
                     @forelse($upcomingEvents as $notice)
                         <div class="notice-item {{ $notice->theme == 'danger' ? 'border-danger-theme' : ($notice->theme == 'warning' ? 'border-warning-theme' : '') }}">
                             <div class="d-flex justify-content-between align-items-start mb-1">
                                 <div>
                                     <h6 class="fw-bold text-dark mb-0">{{ $notice->title }}</h6>
-                                    @if($notice->theme == 'danger') <small class="text-danger fw-bold" style="font-size: 0.7rem;">PENTING (URGENT)</small> @endif
+                                    @if($notice->theme == 'danger') <small class="text-danger fw-bold" style="font-size: 0.7rem;">{{ __('messages.urgent') }}</small> @endif
                                 </div>
                                 <span class="badge {{ $notice->theme == 'danger' ? 'bg-danger' : 'bg-primary' }} shadow-sm">{{ \Carbon\Carbon::parse($notice->start_date)->format('d M') }}</span>
                             </div>
                             <p class="text-muted small mb-0 mt-1">{{ \Illuminate\Support\Str::limit($notice->description, 80) }}</p>
                         </div>
                     @empty
-                        <div class="text-center py-4 text-muted"><i class="bi bi-info-circle fs-1 opacity-50"></i><p class="mt-2 mb-0">Tiada notis terbaru.</p></div>
+                        <div class="text-center py-4 text-muted"><i class="bi bi-info-circle fs-1 opacity-50"></i><p class="mt-2 mb-0">{{ __('messages.no_latest_notices') }}</p></div>
                     @endforelse
                 </div>
             </div>
@@ -122,19 +120,19 @@
 
         <div class="col-lg-5">
             <div class="card card-dashboard h-100">
-                <div class="card-header bg-white border-0 pt-4 px-4"><h5 class="fw-bold text-dark mb-0">Sembang Bersama Guru</h5><small class="text-success"><i class="bi bi-circle-fill me-1" style="font-size: 8px;"></i> Mesej Terkini</small></div>
+                <div class="card-header bg-white border-0 pt-4 px-4"><h5 class="fw-bold text-dark mb-0">{{ __('messages.chat_with_teacher') }}</h5><small class="text-success"><i class="bi bi-circle-fill me-1" style="font-size: 8px;"></i> {{ __('messages.latest_message') }}</small></div>
                 <div class="card-body d-flex flex-column justify-content-center align-items-center text-center px-4">
                     @if($latestMsg)
                         <div class="bg-light p-3 rounded-4 w-100 mb-3 text-start">
-                            <small class="text-muted fw-bold d-block mb-1">{{ $latestMsg->sender_type == 'App\Models\Guardian' ? 'Anda (You):' : 'Guru (Teacher):' }}</small>
+                            <small class="text-muted fw-bold d-block mb-1">{{ $latestMsg->sender_type == 'App\Models\Guardian' ? __('messages.you') : __('messages.teacher_label') }}</small>
                             <p class="text-dark mb-0 fst-italic">"{{ \Illuminate\Support\Str::limit($latestMsg->message_content, 60) }}"</p>
                             <small class="text-muted d-block text-end mt-1" style="font-size: 0.7rem;">{{ $latestMsg->created_at->diffForHumans() }}</small>
                         </div>
-                        <a href="{{ route('parent.communication') }}" class="btn btn-primary rounded-pill w-100 fw-bold">Balas (Reply Now)</a>
+                        <a href="{{ route('parent.communication') }}" class="btn btn-primary rounded-pill w-100 fw-bold">{{ __('messages.reply_now') }}</a>
                     @else
                         <div class="bg-light rounded-circle p-3 mb-3 text-primary bg-opacity-10"><i class="bi bi-chat-heart fs-1"></i></div>
-                        <p class="text-muted small">Tiada mesej terbaru bersama guru kelas.</p>
-                        @if($teacher) <a href="{{ route('parent.communication', ['teacher_id' => $teacher->teacher_id]) }}" class="btn btn-primary rounded-pill px-4 fw-bold">Mula Sembang</a> @endif
+                        <p class="text-muted small">{{ __('messages.no_latest_messages') }}</p>
+                        @if($teacher) <a href="{{ route('parent.communication', ['teacher_id' => $teacher->teacher_id]) }}" class="btn btn-primary rounded-pill px-4 fw-bold">{{ __('messages.start_chat') }}</a> @endif
                     @endif
                 </div>
             </div>

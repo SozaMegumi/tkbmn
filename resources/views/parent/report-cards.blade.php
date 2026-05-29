@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="container py-4">
-    <h3 class="fw-bold mb-4 text-primary"><i class="bi bi-file-earmark-pdf"></i> Academic Report Cards</h3>
+    <h3 class="fw-bold mb-4 text-primary"><i class="bi bi-file-earmark-pdf"></i> {{ __('messages.academic_report_cards') }}</h3>
 
     @if(session('error'))
         <div class="alert alert-danger">{{ session('error') }}</div>
@@ -20,7 +20,7 @@
                                 <li class="list-group-item d-flex justify-content-between align-items-center px-0">
                                     <span class="fw-medium">{{ $assessment->name }}</span>
                                     <a href="{{ route('parent.report-cards.download', ['student_id' => $student->student_id, 'assessment_id' => $assessment->id]) }}" class="btn btn-sm btn-outline-danger fw-bold rounded-pill">
-                                        <i class="bi bi-download"></i> Download PDF
+                                        <i class="bi bi-download"></i> {{ __('messages.download_pdf') }}
                                     </a>
                                 </li>
                             @endforeach

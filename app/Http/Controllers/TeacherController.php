@@ -288,13 +288,22 @@ class TeacherController extends Controller
         }
     }
 
-    public function reportCards() {
-        $teacher = Auth::guard('teacher')->user();
-        if (!$teacher) return redirect()->route('login');
+   public function reportCards()
+{
+    $teacher = auth()->guard('teacher')->user();
+    
+    // Cari kelas yang diajar oleh guru ini
+    $classroom = \App\Models\Classroom::where('teacher_id', $teacher->teacher_id)->first();
+    
+    // Dapatkan senarai murid dalam kelas tersebut
+    $students = $classroom ? \App\Models\Student::where('class_id', $classroom->class_id)->get() : collect();
+    
+    // Dapatkan senarai sesi pentaksiran
+    $assessments = \App\Models\Assessment::all();
 
-        $assessments = Assessment::all();
-        return view('teacher.report-cards', compact('assessments'));
-    }
+    // Hantar data ke fail view teacher/report-cards.blade.php
+    return view('teacher.report-cards', compact('students', 'assessments'));
+}
 
     public function printReportCards($assessment_id) {
         $teacher = Auth::guard('teacher')->user();
@@ -486,4 +495,6 @@ class TeacherController extends Controller
 
         return view('teacher.events', compact('events'));
     }
+
+
 }

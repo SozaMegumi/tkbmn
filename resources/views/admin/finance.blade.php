@@ -49,15 +49,15 @@
 
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h3 class="fw-bold text-dark mb-1">Financial Management</h3>
-            <p class="text-muted small mb-0">Overview of Cash Flow & Budget.</p>
+            <h3 class="fw-bold text-dark mb-1">{{ __('messages.financial_management') }}</h3>
+            <p class="text-muted small mb-0">{{ __('messages.overview_cashflow') }}</p>
         </div>
         <div class="d-flex gap-2">
             <button class="btn btn-success btn-action text-white" data-bs-toggle="modal" data-bs-target="#incomeModal">
-                <i class="bi bi-arrow-down-circle-fill fs-5"></i> <span>Record Income</span>
+                <i class="bi bi-arrow-down-circle-fill fs-5"></i> <span>{{ __('messages.record_income') }}</span>
             </button>
             <button class="btn btn-danger btn-action text-white" data-bs-toggle="modal" data-bs-target="#expenseModal">
-                <i class="bi bi-arrow-up-circle-fill fs-5"></i> <span>Record Expense</span>
+                <i class="bi bi-arrow-up-circle-fill fs-5"></i> <span>{{ __('messages.record_expense') }}</span>
             </button>
         </div>
     </div>
@@ -80,7 +80,7 @@
         <div class="col-lg-6">
             <div class="card card-soft bg-gradient-primary h-100 p-4">
                 <div class="d-flex flex-column h-100 justify-content-center position-relative">
-                    <span class="stat-label mb-2"><i class="bi bi-wallet2 me-2"></i> Current School Budget</span>
+                    <span class="stat-label mb-2"><i class="bi bi-wallet2 me-2"></i> {{ __('messages.current_budget') }}</span>
                     
                     @if(isset($currentBalance) && $currentBalance < 0)
                         <h1 class="display-amount mb-0">-RM {{ number_format(abs($currentBalance), 2) }}</h1>
@@ -88,7 +88,7 @@
                         <h1 class="display-amount mb-0">RM {{ number_format($currentBalance ?? 0.00, 2) }}</h1>
                     @endif
                     
-                    <p class="mt-2 mb-0 opacity-75 small"><i class="bi bi-check-circle me-1"></i> Funds available for use.</p>
+                    <p class="mt-2 mb-0 opacity-75 small"><i class="bi bi-check-circle me-1"></i> {{ __('messages.funds_available') }}</p>
                     <i class="bi bi-cash-stack position-absolute text-white" style="font-size: 10rem; opacity: 0.1; right: -20px; bottom: -30px;"></i>
                 </div>
             </div>
@@ -100,7 +100,7 @@
                     <div class="icon-box bg-success bg-opacity-10 text-success mb-3">
                         <i class="bi bi-graph-up-arrow"></i>
                     </div>
-                    <span class="text-muted small text-uppercase fw-bold">Total Income</span>
+                    <span class="text-muted small text-uppercase fw-bold">{{ __('messages.total_income') }}</span>
                     <h3 class="fw-bold text-dark mt-1">RM {{ number_format($totalIncome ?? 0.00, 2) }}</h3>
                 </div>
             </div>
@@ -112,7 +112,7 @@
                     <div class="icon-box bg-danger bg-opacity-10 text-danger mb-3">
                         <i class="bi bi-graph-down-arrow"></i>
                     </div>
-                    <span class="text-muted small text-uppercase fw-bold">Total Expenses</span>
+                    <span class="text-muted small text-uppercase fw-bold">{{ __('messages.total_expenses') }}</span>
                     <h3 class="fw-bold text-dark mt-1">RM {{ number_format($totalExpense ?? 0.00, 2) }}</h3>
                 </div>
             </div>
@@ -124,12 +124,12 @@
             <div class="card card-soft h-100 bg-white">
                 <div class="card-header bg-white p-4 border-0 d-flex justify-content-between align-items-center">
                     <div>
-                        <h5 class="fw-bold mb-0 text-dark">Cash Flow Overview</h5>
-                        <small class="text-muted">Income vs Expense tracking</small>
+                        <h5 class="fw-bold mb-0 text-dark">{{ __('messages.cash_flow_overview') }}</h5>
+                        <small class="text-muted">{{ __('messages.income_vs_expense') }}</small>
                     </div>
                     <select id="timeframeFilter" class="form-select form-select-sm w-auto border-0 bg-light text-muted fw-bold" onchange="updateChartData()">
-                        <option value="6months">Last 6 Months</option>
-                        <option value="thisyear">This Year</option>
+                        <option value="6months">{{ __('messages.last_6_months') }}</option>
+                        <option value="thisyear">{{ __('messages.this_year') }}</option>
                     </select>
                 </div>
                 <div class="card-body p-4 pt-0">
@@ -141,14 +141,14 @@
         <div class="col-lg-5">
             <div class="card card-soft h-100 bg-white">
                 <div class="card-header bg-white p-4 border-0 pb-2">
-                    <h5 class="fw-bold mb-0 text-dark">Expense Breakdown</h5>
-                    <small class="text-muted">Current Month Spending</small>
+                    <h5 class="fw-bold mb-0 text-dark">{{ __('messages.expense_breakdown') }}</h5>
+                    <small class="text-muted">{{ __('messages.current_month_spending') }}</small>
                 </div>
                 <div class="card-body p-4 pt-0">
                     <div class="position-relative d-flex justify-content-center align-items-center mb-4" style="height: 220px;">
                         <canvas id="expenseChart"></canvas>
                         <div class="position-absolute text-center" style="pointer-events: none;">
-                            <span class="d-block text-muted small fw-bold mb-1" style="font-size: 0.7rem; text-transform: uppercase;">Spent So Far</span>
+                            <span class="d-block text-muted small fw-bold mb-1" style="font-size: 0.7rem; text-transform: uppercase;">{{ __('messages.spent_so_far') }}</span>
                             <h4 class="fw-bold text-dark mb-0" id="expenseChartTotal">RM 0.00</h4>
                         </div>
                     </div>
@@ -160,17 +160,17 @@
 
     <div class="card card-soft bg-white mb-4 border-warning">
         <div class="card-header bg-warning bg-opacity-10 p-4 border-0">
-            <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-clock-history me-2"></i> Pending Parent Payments</h5>
-            <small class="text-muted">Verify receipts before approving income into finance.</small>
+            <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-clock-history me-2"></i> {{ __('messages.pending_parent_payments') }}</h5>
+            <small class="text-muted">{{ __('messages.verify_receipts') }}</small>
         </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead>
                     <tr class="bg-light">
-                        <th class="ps-4">Student</th>
-                        <th>Amount (RM)</th>
-                        <th>Receipt Reference</th>
-                        <th class="text-end pe-4">Actions</th>
+                        <th class="ps-4">{{ __('messages.student') }}</th>
+                        <th>{{ __('messages.amount_rm') }}</th>
+                        <th>{{ __('messages.receipt_reference') }}</th>
+                        <th class="text-end pe-4">{{ __('messages.actions') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -180,20 +180,20 @@
                         <td>RM {{ number_format($p->amount, 2) }}</td>
                         <td>
                             <a href="{{ asset('storage/' . $p->receipt_path) }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-file-earmark-image"></i> View Receipt
+                                <i class="bi bi-file-earmark-image"></i> {{ __('messages.view_receipt') }}
                             </a>
                         </td>
                         <td class="text-end pe-4">
                             <form action="{{ route('admin.finance.approve', $p->payment_id) }}" method="POST" class="d-inline">
                                 @csrf
-                                <button type="submit" class="btn btn-sm btn-success rounded-pill px-3">Approve</button>
+                                <button type="submit" class="btn btn-sm btn-success rounded-pill px-3">{{ __('messages.approve') }}</button>
                             </form>
-                            <button class="btn btn-sm btn-outline-danger rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#rejectModal{{$p->payment_id}}">Reject</button>
+                            <button class="btn btn-sm btn-outline-danger rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#rejectModal{{$p->payment_id}}">{{ __('messages.reject') }}</button>
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="4" class="text-center py-4 text-muted small">No pending parent payments to verify.</td>
+                        <td colspan="4" class="text-center py-4 text-muted small">{{ __('messages.no_pending_payments') }}</td>
                     </tr>
                     @endforelse
                 </tbody>
@@ -203,11 +203,11 @@
 
     <div class="card border-0 shadow-sm rounded-4 mb-4">
         <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 d-flex justify-content-between align-items-center">
-            <h5 class="fw-bold text-dark mb-0"><i class="bi bi-people-fill text-primary me-2"></i> Student Fee Tracker</h5>
+            <h5 class="fw-bold text-dark mb-0"><i class="bi bi-people-fill text-primary me-2"></i> {{ __('messages.student_fee_tracker') }}</h5>
             <form action="{{ route('admin.finance.generate-bills') }}" method="POST">
                 @csrf
-                <button type="submit" class="btn btn-sm btn-outline-primary fw-bold rounded-pill" onclick="return confirm('Are you sure you want to generate RM150.00 bills for all active students for this month?');">
-                    <i class="bi bi-receipt me-1"></i> Generate Monthly Bills
+                <button type="submit" class="btn btn-sm btn-outline-primary fw-bold rounded-pill" onclick="return confirm('{{ __('messages.generate_bills_confirm') }}');">
+                    <i class="bi bi-receipt me-1"></i> {{ __('messages.generate_bills') }}
                 </button>
             </form>
         </div>
@@ -224,7 +224,7 @@
                             </span>
                             
                             <span class="badge bg-primary bg-opacity-10 text-primary border border-primary rounded-pill">
-                                {{ $class->students->count() }} Students
+                                {{ $class->students->count() }} {{ __('messages.students') }}
                             </span>
 
                         </button>
@@ -234,10 +234,10 @@
                             <table class="table table-hover align-middle mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                        <th class="ps-4">Student Name</th>
-                                        <th>Parent/Guardian</th>
-                                        <th>Outstanding Balance</th>
-                                        <th class="text-end pe-4">Status</th>
+                                        <th class="ps-4">{{ __('messages.student_name') }}</th>
+                                        <th>{{ __('messages.parent_guardian') }}</th>
+                                        <th>{{ __('messages.outstanding_balance') }}</th>
+                                        <th class="text-end pe-4">{{ __('messages.status') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -257,15 +257,15 @@
                                             </td>
                                             <td class="text-end pe-4">
                                                 @if($outstanding > 0)
-                                                    <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-2">Outstanding</span>
+                                                    <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-2">{{ __('messages.outstanding_balance') }}</span>
                                                 @else
-                                                    <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2"><i class="bi bi-check-circle-fill me-1"></i> Cleared</span>
+                                                    <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2"><i class="bi bi-check-circle-fill me-1"></i> {{ __('messages.cleared') }}</span>
                                                 @endif
                                             </td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="4" class="text-center py-4 text-muted">No students enrolled in this class yet.</td>
+                                            <td colspan="4" class="text-center py-4 text-muted">{{ __('messages.no_students_enrolled') }}</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
@@ -280,18 +280,18 @@
 
     <div class="card card-soft bg-white mb-4">
         <div class="card-header bg-white p-4 border-0 d-flex justify-content-between align-items-center">
-            <h5 class="fw-bold mb-0 text-dark">Transaction History</h5>
-            <span class="badge bg-light text-secondary border">{{ count($transactions ?? []) }} Records</span>
+            <h5 class="fw-bold mb-0 text-dark">{{ __('messages.transaction_history') }}</h5>
+            <span class="badge bg-light text-secondary border">{{ count($transactions ?? []) }} {{ __('messages.records') }}</span>
         </div>
         <div class="table-responsive">
             <table class="table table-custom align-middle mb-0">
                 <thead>
                     <tr>
-                        <th class="ps-4">Date</th>
-                        <th>Description / Category</th>
-                        <th>Method</th>
-                        <th class="text-end pe-4">Amount (RM)</th>
-                        <th class="text-end pe-4">Action</th>
+                        <th class="ps-4">{{ __('messages.date') }}</th>
+                        <th>{{ __('messages.description_category') }}</th>
+                        <th>{{ __('messages.method') }}</th>
+                        <th class="text-end pe-4">{{ __('messages.amount_rm') }}</th>
+                        <th class="text-end pe-4">{{ __('messages.action') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -321,15 +321,15 @@
                                 
                                 @if(!empty($t->receipt_path))
                                     <a href="{{ asset('storage/' . $t->receipt_path) }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View Uploaded Receipt">
-                                        <i class="bi bi-file-earmark-text"></i> View
+                                        <i class="bi bi-file-earmark-text"></i> {{ __('messages.view') }}
                                     </a>
                                 @else
                                     <button class="btn btn-sm btn-outline-secondary disabled" title="No Receipt Attached" style="opacity: 0.5; cursor: not-allowed;">
-                                        <i class="bi bi-file-earmark-x"></i> None
+                                        <i class="bi bi-file-earmark-x"></i> {{ __('messages.none') }}
                                     </button>
                                 @endif
                                 
-                                <form action="{{ route('admin.finance.delete', $t->transaction_id ?? $t->id) }}" method="POST" onsubmit="return confirm('Delete this record?');">
+                                <form action="{{ route('admin.finance.delete', $t->transaction_id ?? $t->id) }}" method="POST" onsubmit="return confirm('{{ __('messages.delete_confirm') }}');">
                                     @csrf @method('DELETE')
                                     <button class="btn btn-sm btn-link text-muted hover-danger p-0" title="Delete">
                                         <i class="bi bi-trash-fill fs-5"></i>
@@ -342,7 +342,7 @@
                     <tr>
                         <td colspan="5" class="text-center py-5 text-muted">
                             <i class="bi bi-receipt-cutoff fs-1 opacity-50"></i>
-                            <p class="mt-2 mb-0">No transactions recorded yet.</p>
+                            <p class="mt-2 mb-0">{{ __('messages.no_transactions') }}</p>
                         </td>
                     </tr>
                     @endforelse
@@ -359,26 +359,26 @@
             @csrf
             <input type="hidden" name="type" value="income">
             <div class="modal-header bg-success text-white border-0">
-                <h5 class="modal-title fw-bold"><i class="bi bi-wallet-fill me-2"></i> Record Income</h5>
+                <h5 class="modal-title fw-bold"><i class="bi bi-wallet-fill me-2"></i> {{ __('messages.record_income') }}</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4 bg-light">
                 
                 <div class="mb-3">
-                    <label class="small fw-bold text-muted">Category</label>
+                    <label class="small fw-bold text-muted">{{ __('messages.category') }}</label>
                     <select name="category" id="incomeCategory" class="form-select border-0 shadow-sm py-2">
-                        <option value="School Fees">Monthly School Fees</option>
-                        <option value="Registration Fee">Registration Fee</option>
-                        <option value="Uniform/Books">Uniform & Books Sales</option>
-                        <option value="Donation">Donation / Grant</option>
-                        <option value="Other">Other Income</option>
+                        <option value="School Fees">{{ __('messages.monthly_school_fees') }}</option>
+                        <option value="Registration Fee">{{ __('messages.registration_fee') }}</option>
+                        <option value="Uniform/Books">{{ __('messages.uniform_books') }}</option>
+                        <option value="Donation">{{ __('messages.donation') }}</option>
+                        <option value="Other">{{ __('messages.other_income') }}</option>
                     </select>
                 </div>
 
                 <div class="mb-3" id="studentInvoiceWrapper">
-                    <label class="small fw-bold text-muted">Select Unpaid Student Invoice (Optional)</label>
+                    <label class="small fw-bold text-muted">{{ __('messages.select_unpaid_invoice') }}</label>
                     <select name="payment_id" id="admin_payment_id" class="form-select border-0 shadow-sm py-2">
-                        <option value="" data-amount="" data-desc="">-- Or select an unpaid invoice --</option>
+                        <option value="" data-amount="" data-desc="">{{ __('messages.or_select_unpaid') }}</option>
                         @foreach($pendingPayments ?? [] as $invoice)
                             <option value="{{ $invoice->payment_id }}" 
                                     data-amount="{{ $invoice->amount }}" 
@@ -390,39 +390,39 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="small fw-bold text-muted">Description (Who Paid?)</label>
+                    <label class="small fw-bold text-muted">{{ __('messages.description_who_paid') }}</label>
                     <input type="text" id="admin_desc" name="description" class="form-control border-0 shadow-sm py-2" placeholder="e.g. Ali Bin Abu (Jan Fee)" required>
                 </div>
                 
                 <div class="row">
                     <div class="col-6 mb-3">
-                        <label class="small fw-bold text-muted">Amount (RM)</label>
+                        <label class="small fw-bold text-muted">{{ __('messages.amount_rm') }}</label>
                         <input type="number" step="0.01" id="admin_amount" name="amount" class="form-control border-0 shadow-sm py-2 text-success fw-bold" placeholder="0.00" required>
                     </div>
                     <div class="col-6 mb-3">
-                        <label class="small fw-bold text-muted">Date</label>
+                        <label class="small fw-bold text-muted">{{ __('messages.date') }}</label>
                         <input type="date" name="date" class="form-control border-0 shadow-sm py-2" value="{{ date('Y-m-d') }}" required>
                     </div>
                 </div>
                 
                 <div class="mb-3">
-                    <label class="small fw-bold text-muted">Payment Method</label>
+                    <label class="small fw-bold text-muted">{{ __('messages.payment_method') }}</label>
                     <select name="payment_method" class="form-select border-0 shadow-sm py-2">
-                        <option value="Cash">Cash Handover</option>
-                        <option value="Online Transfer">Online Transfer</option>
-                        <option value="Cheque">Cheque</option>
+                        <option value="Cash">{{ __('messages.cash_handover') }}</option>
+                        <option value="Online Transfer">{{ __('messages.online_transfer') }}</option>
+                        <option value="Cheque">{{ __('messages.cheque') }}</option>
                     </select>
                 </div>
 
                 <div class="mb-2">
-                    <label class="small fw-bold text-muted">Upload Receipt / Document (Optional)</label>
+                    <label class="small fw-bold text-muted">{{ __('messages.upload_receipt_optional') }}</label>
                     <input type="file" name="receipt_file" class="form-control border-0 shadow-sm" accept=".jpg,.jpeg,.png,.pdf">
-                    <small class="text-muted mt-1" style="font-size: 0.75rem;">Supported formats: JPG, PNG, PDF (Max 2MB)</small>
+                    <small class="text-muted mt-1" style="font-size: 0.75rem;">{{ __('messages.supported_formats') }}</small>
                 </div>
 
             </div>
             <div class="modal-footer border-0 bg-light">
-                <button type="submit" class="btn btn-success w-100 fw-bold rounded-pill py-2 shadow">Save Income Record</button>
+                <button type="submit" class="btn btn-success w-100 fw-bold rounded-pill py-2 shadow">{{ __('messages.save_income_record') }}</button>
             </div>
         </form>
     </div>
@@ -434,52 +434,52 @@
             @csrf
             <input type="hidden" name="type" value="expense">
             <div class="modal-header bg-danger text-white border-0">
-                <h5 class="modal-title fw-bold"><i class="bi bi-cart-fill me-2"></i> Record Expense</h5>
+                <h5 class="modal-title fw-bold"><i class="bi bi-cart-fill me-2"></i> {{ __('messages.record_expense') }}</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4 bg-light">
                 <div class="mb-3">
-                    <label class="small fw-bold text-muted">Category</label>
+                    <label class="small fw-bold text-muted">{{ __('messages.category') }}</label>
                     <select id="expenseCategory" name="category" class="form-select border-0 shadow-sm py-2">
-                        <option value="Food & Kitchen">Kitchen Supplies (Rice, etc.)</option>
-                        <option value="Stationary">Classroom Stationary</option>
-                        <option value="Maintenance">Repairs & Maintenance</option>
-                        <option value="Utility Bills">Utilities (Electric/Water)</option>
-                        <option value="Salary">Staff Salary</option>
-                        <option value="Event Cost">Event Expenses</option>
+                        <option value="Food & Kitchen">{{ __('messages.kitchen_supplies') }}</option>
+                        <option value="Stationary">{{ __('messages.classroom_stationary') }}</option>
+                        <option value="Maintenance">{{ __('messages.repairs_maintenance') }}</option>
+                        <option value="Utility Bills">{{ __('messages.utilities') }}</option>
+                        <option value="Salary">{{ __('messages.staff_salary') }}</option>
+                        <option value="Event Cost">{{ __('messages.event_expenses') }}</option>
                     </select>
                 </div>
                 <div class="mb-3">
-                    <label class="small fw-bold text-muted">Description (Details)</label>
+                    <label class="small fw-bold text-muted">{{ __('messages.description_details') }}</label>
                     <input type="text" id="expenseDesc" name="description" class="form-control border-0 shadow-sm py-2" placeholder="e.g. Bought 10kg Rice" required>
                 </div>
                 <div class="row">
                     <div class="col-6 mb-3">
-                        <label class="small fw-bold text-muted">Amount (RM)</label>
+                        <label class="small fw-bold text-muted">{{ __('messages.amount_rm') }}</label>
                         <input type="number" id="expenseAmount" step="0.01" name="amount" class="form-control border-0 shadow-sm py-2 text-danger fw-bold" placeholder="0.00" required>
                     </div>
                     <div class="col-6 mb-3">
-                        <label class="small fw-bold text-muted">Date</label>
+                        <label class="small fw-bold text-muted">{{ __('messages.date') }}</label>
                         <input type="date" name="date" class="form-control border-0 shadow-sm py-2" value="{{ date('Y-m-d') }}" required>
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label class="small fw-bold text-muted">Payment Method</label>
+                    <label class="small fw-bold text-muted">{{ __('messages.payment_method') }}</label>
                     <select name="payment_method" class="form-select border-0 shadow-sm py-2">
-                        <option value="Cash">Cash</option>
-                        <option value="Online Transfer">Online Transfer</option>
+                        <option value="Cash">{{ __('messages.cash') }}</option>
+                        <option value="Online Transfer">{{ __('messages.online_transfer') }}</option>
                     </select>
                 </div>
 
                 <div class="mb-2">
-                    <label class="small fw-bold text-muted">Upload Receipt / Proof (Optional)</label>
+                    <label class="small fw-bold text-muted">{{ __('messages.upload_receipt_optional') }}</label>
                     <input type="file" name="receipt_file" class="form-control border-0 shadow-sm" accept=".jpg,.jpeg,.png,.pdf">
-                    <small class="text-muted mt-1" style="font-size: 0.75rem;">Supported formats: JPG, PNG, PDF (Max 2MB)</small>
+                    <small class="text-muted mt-1" style="font-size: 0.75rem;">{{ __('messages.supported_formats') }}</small>
                 </div>
 
             </div>
             <div class="modal-footer border-0 bg-light">
-                <button type="submit" class="btn btn-danger w-100 fw-bold rounded-pill py-2 shadow">Save Expense Record</button>
+                <button type="submit" class="btn btn-danger w-100 fw-bold rounded-pill py-2 shadow">{{ __('messages.save_expense_record') }}</button>
             </div>
         </form>
     </div>
@@ -491,15 +491,15 @@
         <form class="modal-content border-0 shadow" action="{{ route('admin.finance.reject', $p->payment_id) }}" method="POST">
             @csrf
             <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title">Reject Payment</h5>
+                <h5 class="modal-title">{{ __('messages.reject') }}</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
-                <label class="small fw-bold">Reason for Rejection</label>
+                <label class="small fw-bold">{{ __('messages.reason_for_rejection') }}</label>
                 <textarea name="remarks" class="form-control" placeholder="e.g. Blurry receipt, incorrect amount" required></textarea>
             </div>
             <div class="modal-footer">
-                <button type="submit" class="btn btn-danger w-100 rounded-pill">Confirm Reject</button>
+                <button type="submit" class="btn btn-danger w-100 rounded-pill">{{ __('messages.confirm_reject') }}</button>
             </div>
         </form>
     </div>

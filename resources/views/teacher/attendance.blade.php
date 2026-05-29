@@ -68,13 +68,13 @@
     
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h3 class="fw-bold text-dark mb-1">Attendance Management</h3>
-            <p class="text-muted small mb-0">Record daily attendance for your students.</p>
+            <h3 class="fw-bold text-dark mb-1">{{ __('messages.attendance_management') }}</h3>
+            <p class="text-muted small mb-0">{{ __('messages.record_daily_attendance') }}</p>
         </div>
         <div class="d-flex align-items-center gap-2">
             @if(isset($selectedClass) && isset($selectedDate))
                 <a href="{{ route('teacher.attendance.print', ['date' => $selectedDate, 'class_id' => $selectedClass->class_id]) }}" target="_blank" class="btn btn-outline-danger shadow-sm px-3 py-2 rounded-pill fw-bold bg-white">
-                    <i class="bi bi-file-pdf-fill"></i> Cetak PDF
+                    <i class="bi bi-file-pdf-fill"></i> {{ __('messages.print_pdf') }}
                 </a>
             @endif
             
@@ -97,13 +97,13 @@
                 <div class="row g-4 align-items-center">
                     
                     <div class="col-md-3">
-                        <label class="small fw-bold text-muted mb-2">1. Select Date</label>
+                        <label class="small fw-bold text-muted mb-2">{{ __('messages.select_date_step') }}</label>
                         <div class="date-card-wrapper" onclick="openDatePicker()">
                             <i class="bi bi-calendar-check calendar-icon"></i>
                             <div class="selected-date-display" id="dateDisplay">
                                 {{ \Carbon\Carbon::parse(request('attendance_date', date('Y-m-d')))->format('d M Y') }}
                             </div>
-                            <small class="text-muted" style="font-size: 0.75rem;">Tap to change</small>
+                            <small class="text-muted" style="font-size: 0.75rem;">{{ __('messages.tap_to_change') }}</small>
 
                             <input type="date" name="attendance_date" id="dateInput"
                                    class="ghost-date-input" 
@@ -113,9 +113,9 @@
                     </div>
 
                     <div class="col-md-7">
-                        <label class="small fw-bold text-muted mb-2">2. Select Class</label>
+                        <label class="small fw-bold text-muted mb-2">{{ __('messages.select_class_step') }}</label>
                         <select name="class_id" class="form-select form-select-lg border-0 bg-light shadow-sm py-3" style="height: auto;" required>
-                            <option value="">-- Choose a Class --</option>
+                            <option value="">{{ __('messages.choose_a_class') }}</option>
                             @foreach($classes as $c)
                                 <option value="{{ $c->class_id }}" {{ (request('class_id') == $c->class_id) ? 'selected' : '' }}>
                                     {{ $c->class_name }}
@@ -127,7 +127,7 @@
                     <div class="col-md-2 text-end">
                         <label class="d-block mb-2">&nbsp;</label>
                         <button type="submit" class="btn btn-primary w-100 fw-bold shadow-sm py-3" style="border-radius: 12px;">
-                            Load List <i class="bi bi-arrow-right ms-2"></i>
+                            {{ __('messages.load_list') }} <i class="bi bi-arrow-right ms-2"></i>
                         </button>
                     </div>
                 </div>
@@ -144,17 +144,17 @@
         <div class="card card-soft">
             <div class="card-header bg-white p-4 border-bottom-0 d-flex justify-content-between align-items-center">
                 <div>
-                    <h5 class="fw-bold mb-0 text-dark">Student List</h5>
+                    <h5 class="fw-bold mb-0 text-dark">{{ __('messages.student_list') }}</h5>
                     <small class="text-muted">
-                        Class: <strong class="text-primary">{{ $selectedClass->class_name }}</strong> | 
-                        Date: <strong>{{ \Carbon\Carbon::parse($selectedDate)->format('d M Y') }}</strong>
+                        {{ __('messages.class_label') }} <strong class="text-primary">{{ $selectedClass->class_name }}</strong> | 
+                        {{ __('messages.date_label') }} <strong>{{ \Carbon\Carbon::parse($selectedDate)->format('d M Y') }}</strong>
                     </small>
                 </div>
                 <div>
                     <button type="button" onclick="markAllPresent()" class="btn btn-outline-success btn-sm rounded-pill fw-bold me-2">
-                        <i class="bi bi-check-all"></i> All Present
+                        <i class="bi bi-check-all"></i> {{ __('messages.all_present') }}
                     </button>
-                    <span class="badge bg-light text-dark border">{{ count($students) }} Students</span>
+                    <span class="badge bg-light text-dark border">{{ count($students) }} {{ __('messages.students_count') }}</span>
                 </div>
             </div>
 
@@ -162,9 +162,9 @@
                 <table class="table align-middle mb-0">
                     <thead class="bg-light text-secondary small text-uppercase">
                         <tr>
-                            <th class="ps-4 py-3">Student Name</th>
-                            <th class="text-center py-3">Status</th>
-                            <th class="pe-4 py-3" style="width: 35%;">Reason & MC/Surat (If Absent)</th>
+                            <th class="ps-4 py-3">{{ __('messages.student_name') }}</th>
+                            <th class="text-center py-3">{{ __('messages.status') }}</th>
+                            <th class="pe-4 py-3" style="width: 35%;">{{ __('messages.reason_mc_surat') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -193,7 +193,7 @@
                                            id="p_{{ $student->student_id }}" value="Hadir" 
                                            {{ $status == 'Hadir' ? 'checked' : '' }}>
                                     <label class="btn-status-custom btn-present" for="p_{{ $student->student_id }}">
-                                        Hadir
+                                        {{ __('messages.present') }}
                                     </label>
 
                                     <input type="radio" class="status-radio" 
@@ -201,7 +201,7 @@
                                            id="a_{{ $student->student_id }}" value="Tak Hadir" 
                                            {{ $status == 'Tak Hadir' ? 'checked' : '' }}>
                                     <label class="btn-status-custom btn-absent" for="a_{{ $student->student_id }}">
-                                        Tak Hadir
+                                        {{ __('messages.absent') }}
                                     </label>
 
                                     <input type="radio" class="status-radio" 
@@ -209,7 +209,7 @@
                                            id="l_{{ $student->student_id }}" value="Cuti" 
                                            {{ $status == 'Cuti' ? 'checked' : '' }}>
                                     <label class="btn-status-custom btn-late" for="l_{{ $student->student_id }}">
-                                        Cuti
+                                        {{ __('messages.leave') }}
                                     </label>
                                 </div>
                             </td>
@@ -217,16 +217,16 @@
                                 <div class="d-flex align-items-center gap-2">
                                     <input type="text" name="attendances[{{ $student->student_id }}][reason]" 
                                            class="form-control bg-light border-0 rounded-pill px-3 w-100" 
-                                           placeholder="Cth: Demam, Balik Kampung..." value="{{ $reason }}">
+                                           placeholder="{{ __('messages.reason_placeholder') }}" value="{{ $reason }}">
                                     
-                                    <label class="btn btn-light rounded-circle shadow-sm border mb-0 btn-upload-circle" title="Muat Naik MC / Surat">
+                                    <label class="btn btn-light rounded-circle shadow-sm border mb-0 btn-upload-circle" title="{{ __('messages.upload_mc_letter') }}">
                                         <i class="bi bi-paperclip text-secondary fs-5" id="icon_{{ $student->student_id }}"></i>
                                         <input type="file" name="attendances[{{ $student->student_id }}][attachment]" class="d-none" accept=".pdf,.jpg,.jpeg,.png" 
                                                onchange="document.getElementById('icon_{{ $student->student_id }}').className = 'bi bi-file-earmark-check-fill text-success fs-5';">
                                     </label>
 
                                     @if($attachment)
-                                        <a href="{{ asset('storage/' . $attachment) }}" target="_blank" class="btn btn-info rounded-circle shadow-sm mb-0 btn-upload-circle text-white" title="Lihat MC">
+                                        <a href="{{ asset('storage/' . $attachment) }}" target="_blank" class="btn btn-info rounded-circle shadow-sm mb-0 btn-upload-circle text-white" title="{{ __('messages.view_mc') }}">
                                             <i class="bi bi-file-medical-fill fs-5"></i>
                                         </a>
                                     @endif
@@ -237,7 +237,7 @@
                         <tr>
                             <td colspan="3" class="text-center py-5 text-muted">
                                 <i class="bi bi-folder-x fs-1 opacity-50"></i>
-                                <p class="mt-2">No students enrolled in this class.</p>
+                                <p class="mt-2">{{ __('messages.no_students_enrolled_class') }}</p>
                             </td>
                         </tr>
                         @endforelse
@@ -249,10 +249,10 @@
             <div class="card-footer bg-light p-4 border-top">
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="text-muted small">
-                        <i class="bi bi-info-circle me-1"></i> Make sure to check before saving.
+                        <i class="bi bi-info-circle me-1"></i> {{ __('messages.check_before_saving') }}
                     </div>
                     <button type="submit" class="btn btn-success fw-bold px-5 py-2 shadow-sm" style="border-radius: 12px;">
-                        <i class="bi bi-cloud-arrow-up-fill me-2"></i> Save Attendance & Docs
+                        <i class="bi bi-cloud-arrow-up-fill me-2"></i> {{ __('messages.save_attendance_docs') }}
                     </button>
                 </div>
             </div>

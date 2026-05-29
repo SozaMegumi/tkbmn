@@ -55,15 +55,15 @@
 <div class="container-fluid pb-5">
 
     <div class="mb-4">
-        <h3 class="fw-bold text-dark mb-1">Dashboard Overview</h3>
-        <p class="text-muted small mb-0">Welcome back to Tabika Kemas Admin Portal.</p>
+        <h3 class="fw-bold text-dark mb-1">{{ __('messages.admin_dashboard_title') }}</h3>
+        <p class="text-muted small mb-0">{{ __('messages.admin_welcome') }}</p>
     </div>
 
     <div class="row g-4 mb-4">
         <div class="col-lg-4 col-md-6">
             <div class="card card-soft bg-gradient-primary h-100 p-4">
                 <div class="d-flex flex-column justify-content-center position-relative h-100">
-                    <span class="stat-label mb-2"><i class="bi bi-people-fill me-2"></i> Total Students</span>
+                    <span class="stat-label mb-2"><i class="bi bi-people-fill me-2"></i> {{ __('messages.total_students') }}</span>
                     <h1 class="display-amount mb-0">{{ $totalStudents ?? 1 }}</h1>
                     <i class="bi bi-person-badge position-absolute text-white" style="font-size: 7rem; opacity: 0.15; right: -10px; bottom: -20px;"></i>
                 </div>
@@ -73,7 +73,7 @@
         <div class="col-lg-4 col-md-6">
             <div class="card card-soft bg-gradient-success h-100 p-4">
                 <div class="d-flex flex-column justify-content-center position-relative h-100">
-                    <span class="stat-label mb-2"><i class="bi bi-easel-fill me-2"></i> Active Classes</span>
+                    <span class="stat-label mb-2"><i class="bi bi-easel-fill me-2"></i> {{ __('messages.active_classes') }}</span>
                     <h1 class="display-amount mb-0">{{ $totalClasses ?? 4 }}</h1>
                     <i class="bi bi-book position-absolute text-white" style="font-size: 7rem; opacity: 0.15; right: -10px; bottom: -20px;"></i>
                 </div>
@@ -83,7 +83,7 @@
         <div class="col-lg-4 col-md-12">
             <div class="card card-soft bg-gradient-warning h-100 p-4">
                 <div class="d-flex flex-column justify-content-center position-relative h-100">
-                    <span class="stat-label mb-2"><i class="bi bi-hourglass-split me-2"></i> Pending Approvals</span>
+                    <span class="stat-label mb-2"><i class="bi bi-hourglass-split me-2"></i> {{ __('messages.pending_approvals') }}</span>
                     <h1 class="display-amount mb-0">{{ $pendingApprovals ?? 0 }}</h1>
                     <i class="bi bi-file-earmark-check position-absolute text-dark" style="font-size: 7rem; opacity: 0.1; right: -10px; bottom: -20px;"></i>
                 </div>
@@ -98,8 +98,8 @@
             <div class="card card-soft bg-white mb-4">
                 <div class="card-header bg-white p-4 border-0 d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="fw-bold mb-0 text-dark">Weekly Attendance Trend</h6>
-                        <small class="text-muted">Last 5 school days</small>
+                        <h6 class="fw-bold mb-0 text-dark">{{ __('messages.weekly_attendance') }}</h6>
+                        <small class="text-muted">{{ __('messages.last_5_days') }}</small>
                     </div>
                 </div>
                 <div class="card-body p-4 pt-0">
@@ -109,17 +109,17 @@
 
             <div class="card card-soft bg-white">
                 <div class="card-header bg-white p-4 border-0 d-flex justify-content-between align-items-center">
-                    <h6 class="fw-bold mb-0 text-dark">Recent Enrollments</h6>
-                    <a href="{{ route('admin.enrolment') }}" class="btn btn-sm btn-light">View All</a>
+                    <h6 class="fw-bold mb-0 text-dark">{{ __('messages.recent_enrollments') }}</h6>
+                    <a href="{{ route('admin.enrolment') }}" class="btn btn-sm btn-light">{{ __('messages.view_all') }}</a>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-custom align-middle mb-0">
                         <thead>
                             <tr>
-                                <th class="ps-4">Student Name</th>
-                                <th>Target Class</th>
-                                <th>Date Applied</th>
-                                <th class="text-end pe-4">Status</th>
+                                <th class="ps-4">{{ __('messages.student_name') }}</th>
+                                <th>{{ __('messages.target_class') }}</th>
+                                <th>{{ __('messages.date_applied') }}</th>
+                                <th class="text-end pe-4">{{ __('messages.status') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -130,16 +130,16 @@
         <td class="text-muted small">{{ $enrolment->created_at->format('d M Y') }}</td>
         <td class="text-end pe-4">
             @if($enrolment->status == 'Enrolled' || $enrolment->status == 'Approved')
-                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill">Enrolled</span>
+                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill">{{ __('messages.enrolled') }}</span>
             @else
-                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill">Pending</span>
+                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill">{{ __('messages.pending') }}</span>
             @endif
         </td>
     </tr>
     @empty
     <tr>
         <td colspan="4" class="text-center py-4 text-muted">
-            No recent enrollments found.
+            {{ __('messages.no_recent_enroll') }}
         </td>
     </tr>
     @endforelse
@@ -154,32 +154,32 @@
             
             <div class="card card-soft bg-white mb-4">
                 <div class="card-header bg-white p-4 border-0">
-                    <h6 class="fw-bold mb-0 text-dark">Quick Actions</h6>
+                    <h6 class="fw-bold mb-0 text-dark">{{ __('messages.quick_actions') }}</h6>
                 </div>
                 <div class="card-body p-4 pt-0">
                     <div class="row g-3">
                         <div class="col-6">
                             <a href="{{ route('admin.enrolment') }}" class="action-box">
                                 <i class="bi bi-person-plus text-primary"></i>
-                                New Student
+                                {{ __('messages.new_student') }}
                             </a>
                         </div>
                         <div class="col-6">
                             <a href="{{ route('admin.finance') }}" class="action-box">
                                 <i class="bi bi-wallet2 text-success"></i>
-                                Record Fee
+                                {{ __('messages.record_fee') }}
                             </a>
                         </div>
                         <div class="col-6">
                             <a href="{{ route('admin.events') }}" class="action-box">
                                 <i class="bi bi-megaphone text-warning"></i>
-                                Post Event
+                                {{ __('messages.post_event') }}
                             </a>
                         </div>
                         <div class="col-6">
                             <a href="{{ route('admin.reports') }}" class="action-box">
                                 <i class="bi bi-file-earmark-bar-graph text-info"></i>
-                                Reports
+                                {{ __('messages.reports') }}
                             </a>
                         </div>
                     </div>
@@ -187,7 +187,7 @@
             </div>
             <div class="card card-soft bg-white">
                 <div class="card-header bg-white p-4 border-0">
-                    <h6 class="fw-bold mb-0 text-dark">Alerts & Tasks</h6>
+                    <h6 class="fw-bold mb-0 text-dark">{{ __('messages.alerts_tasks') }}</h6>
                 </div>
                 <div class="card-body p-0">
                     <ul class="list-group list-group-flush">
@@ -201,7 +201,7 @@
     </li>
     @empty
     <li class="list-group-item p-4 text-center text-muted border-top border-bottom-0">
-        <p class="mb-0 small">No active alerts or pending tasks today. Great job!</p>
+        <p class="mb-0 small">{{ __('messages.no_alerts') }}</p>
     </li>
     @endforelse
 </ul>

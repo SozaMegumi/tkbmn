@@ -4,15 +4,15 @@
 <div class="container-fluid pb-5">
 
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="mb-0 fw-bold text-dark">School Events & Calendar</h3>
+        <h3 class="mb-0 fw-bold text-dark">{{ __('messages.school_events') }} & Calendar</h3>
     </div>
 
     <div class="row g-4">
         <div class="col-lg-8">
             <div class="card shadow-sm border-0 h-100 overflow-hidden rounded-4">
                 <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-google text-primary me-2"></i> Official Live Calendar</h6>
-                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill">Synced</span>
+                    <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-google text-primary me-2"></i> {{ __('messages.official_live_calendar') }}</h6>
+                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill">{{ __('messages.synced') }}</span>
                 </div>
                 <div class="card-body p-0">
                     <div class="ratio ratio-16x9" style="min-height: 600px;">
@@ -31,7 +31,7 @@
         <div class="col-lg-4">
             <div class="card shadow-sm border-0 h-100 rounded-4">
                 <div class="card-header bg-white py-3 border-0">
-                    <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-list-stars text-warning me-2"></i> Upcoming Activities</h6>
+                    <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-list-stars text-warning me-2"></i> {{ __('messages.upcoming_activities') }}</h6>
                 </div>
                 <div class="card-body p-0" style="max-height: 600px; overflow-y: auto;">
                     <div class="list-group list-group-flush">
@@ -49,13 +49,13 @@
 
                             <div class="flex-grow-1">
                                 <h6 class="fw-bold mb-1 text-dark">{{ $event->title }}</h6>
-                                <p class="text-muted small mb-2">{{ $event->description ?? 'No additional details provided.' }}</p>
+                                <p class="text-muted small mb-2">{{ $event->description ?? __('messages.no_additional_details') }}</p>
                                 
                                 <div class="d-flex align-items-center gap-2">
                                     @if($event->theme == 'danger')
-                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill">Holiday</span>
+                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill">{{ __('messages.holiday') }}</span>
                                     @else
-                                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill">Activity</span>
+                                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill">{{ __('messages.activity') }}</span>
                                     @endif
                                     
                                     @if($event->end_date && $event->end_date != $event->start_date)
@@ -70,7 +70,7 @@
                         @empty
                         <div class="text-center p-5 text-muted">
                             <i class="bi bi-calendar-x fs-1 opacity-50"></i>
-                            <p class="mt-3 mb-0 small">No upcoming events posted.</p>
+                            <p class="mt-3 mb-0 small">{{ __('messages.no_upcoming_events') }}</p>
                         </div>
                         @endforelse
                     </div>
