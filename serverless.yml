@@ -1,0 +1,49 @@
+service: tkbmn-app
+
+provider:
+    name: aws
+    region: ap-southeast-1
+    runtime: provided.al2023
+    environment:
+        APP_ENV: production
+        APP_CONFIG_CACHE: /tmp/config.php
+        APP_EVENTS_CACHE: /tmp/events.php
+        APP_PACKAGES_CACHE: /tmp/packages.php
+        APP_ROUTES_CACHE: /tmp/routes.php
+
+plugins:
+    - ./vendor/bref/bref
+    - serverless-domain-manager
+
+custom:
+    customDomain:
+        domainName: tkbmn.my
+        certificateName: 'tkbmn.my' # Mesti sama seperti di ACM
+        basePath: ''
+        stage: ${opt:stage, 'dev'}
+        createRoute53Record: false
+        endpointType: 'regional'
+
+functions:
+    web:
+        handler: public/index.php
+        timeout: 28
+        layers:
+            - ${bref:layer.php-83-fpm}
+        events:
+            - httpApi: '*'
+
+    artisan:
+        handler: artisan
+        timeout: 120
+        layers:
+            - ${bref:layer.php-83}
+            - ${bref:layer.console}
+
+package:
+    patterns:
+        - '!node_modules/**'
+        - '!public/storage'
+        - '!resources/assets/**'
+        - '!storage/**'
+        - '!tests/**'
