@@ -15,6 +15,7 @@
             font-family: 'Poppins', sans-serif; 
             background-color: #f0f2f5; 
             margin: 0; 
+            overflow-x: hidden; /* Elak skrin meleret ke tepi */
         }
         
         .sidebar { 
@@ -25,9 +26,10 @@
             left: 0; 
             background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
             color: white; 
-            z-index: 1000;
+            z-index: 1050;
             box-shadow: 4px 0 15px rgba(0,0,0,0.1);
             overflow-y: auto; 
+            transition: transform 0.3s ease-in-out; /* Animasi smooth */
         }
         
         .sidebar-header {
@@ -75,6 +77,7 @@
             margin-left: 280px; 
             padding: 40px; 
             min-height: 100vh; 
+            transition: margin-left 0.3s ease-in-out;
         }
         
         .brand-icon {
@@ -88,13 +91,44 @@
 
         .sidebar::-webkit-scrollbar { width: 5px; }
         .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 5px; }
+
+        /* --- KOD RESPONSIVE MOBILE BERMULA DI SINI --- */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1040;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%); /* Sembunyi sidebar kat luar skrin */
+            }
+            .sidebar.show {
+                transform: translateX(0); /* Masuk semula bila butang ditekan */
+            }
+            .main-content {
+                margin-left: 0; /* Buang margin supaya ambil 100% skrin */
+                padding: 20px; /* Kurangkan padding sikit untuk phone */
+            }
+            .sidebar-overlay.show {
+                display: block; /* Tunjuk bayang hitam bila menu buka */
+            }
+        }
     </style>
 </head>
 <body>
 
-    <div class="sidebar d-flex flex-column">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="sidebar d-flex flex-column" id="mainSidebar">
         
         <div class="sidebar-header">
+            <button class="btn btn-sm text-white d-md-none position-absolute" style="top: 10px; right: 10px;" id="closeSidebar">
+                <i class="bi bi-x-lg"></i>
+            </button>
+
             <div class="brand-icon" style="background: transparent; overflow: hidden;">
                 <img src="{{ asset('kemaslogo.png') }}" alt="Logo" style="width: 100%; height: 100%; object-fit: cover;">
             </div>
@@ -173,12 +207,11 @@
                 <li class="nav-item"><a class="nav-link {{ request()->routeIs('teacher.attendance*') ? 'active' : '' }}" href="{{ route('teacher.attendance') }}"><i class="bi bi-check-circle-fill"></i> {{ __('messages.attendance') }}</a></li>
                 <li class="nav-item"><a class="nav-link {{ request()->routeIs('teacher.grading*') ? 'active' : '' }}" href="{{ route('teacher.grading') }}"><i class="bi bi-mortarboard-fill"></i> {{ __('messages.grading') }}</a></li>
                 <li class="nav-item">
-   <li class="nav-item">
-    <a class="nav-link {{ request()->routeIs('teacher.daily-logs*') ? 'active' : '' }}" href="{{ route('teacher.daily-logs') }}">
-        <i class="bi bi-journal-richtext"></i>
-        <span>{{ __('messages.daily_student_logs') ?? 'Aktiviti Harian Murid' }}</span>
-    </a>
-</li>
+                    <a class="nav-link {{ request()->routeIs('teacher.daily-logs*') ? 'active' : '' }}" href="{{ route('teacher.daily-logs') }}">
+                        <i class="bi bi-journal-richtext"></i>
+                        <span>{{ __('messages.daily_student_logs') ?? 'Aktiviti Harian Murid' }}</span>
+                    </a>
+                </li>
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('teacher.hafazan*') ? 'active' : '' }}" href="{{ route('teacher.hafazan') }}">
                         <i class="bi bi-book-half"></i> {{ __('messages.hafazan_records') }}
@@ -250,6 +283,10 @@
     </div>
 
     <div class="main-content">
+        <button class="btn btn-dark d-md-none mb-4 shadow-sm" id="openSidebar" style="background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border:none;">
+            <i class="bi bi-list fs-5 me-2"></i> Menu
+        </button>
+
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert">
                 <i class="bi bi-check-circle-fill me-2"></i> {{ session('success') }}
@@ -268,5 +305,29 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const sidebar = document.getElementById('mainSidebar');
+            const openBtn = document.getElementById('openSidebar');
+            const closeBtn = document.getElementById('closeSidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+
+            // Buka Menu
+            openBtn.addEventListener('click', () => {
+                sidebar.classList.add('show');
+                overlay.classList.add('show');
+            });
+
+            // Tutup Menu
+            const closeMenu = () => {
+                sidebar.classList.remove('show');
+                overlay.classList.remove('show');
+            };
+
+            closeBtn.addEventListener('click', closeMenu);
+            overlay.addEventListener('click', closeMenu);
+        });
+    </script>
 </body>
 </html>
