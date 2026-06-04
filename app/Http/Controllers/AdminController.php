@@ -21,7 +21,7 @@ use Spatie\GoogleCalendar\Event as GoogleEvent;
 
 class AdminController extends Controller
 {
-    // ==========================================
+ // ==========================================
     // DASHBOARD & OVERVIEW
     // ==========================================
     public function dashboard() {
@@ -48,13 +48,39 @@ class AdminController extends Controller
                 ];
             }
 
-            $attendanceLabels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-            $attendanceData = [94, 91, 95, 89, 91];
+            // --- MULA: KOD TARIK DATA KEHADIRAN SEBENAR UNTUK GRAF ---
+            $attendanceLabels = [];
+            $attendanceData = [];
+            
+            // Pusingan (Loop) untuk tarik data 5 hari yang lepas (termasuk hari ini)
+            for ($i = 4; $i >= 0; $i--) {
+                // Set zon masa Malaysia
+                $targetDate = Carbon::now('Asia/Kuala_Lumpur')->subDays($i);
+                
+                // Masukkan nama hari (Contoh: Mon, Tue)
+                $attendanceLabels[] = $targetDate->format('D'); 
+
+                // Format tarikh ke Y-m-d untuk cari dalam database
+                $formattedDate = $targetDate->format('Y-m-d');
+
+                // Kira berapa orang yang status 'Hadir' pada tarikh tersebut
+                $presentCount = Attendance::where('date', $formattedDate)
+                                          ->where('status', 'Hadir')
+                                          ->count();
+
+                // Formula Peratusan
+                $percentage = $totalStudents > 0 ? round(($presentCount / $totalStudents) * 100) : 0;
+                
+                $attendanceData[] = $percentage;
+            }
+            // --- TAMAT: KOD TARIK DATA KEHADIRAN SEBENAR ---
 
         } catch (\Exception $e) {
             $totalStudents = 0; $totalClasses = 0; $pendingApprovals = 0;
             $recentEnrollments = []; $alerts = [];
-            $attendanceLabels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+            
+            // Jika ada ralat (error) database, sistem takkan crash, dia paparkan kosong je
+            $attendanceLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
             $attendanceData = [0, 0, 0, 0, 0];
         }
         
