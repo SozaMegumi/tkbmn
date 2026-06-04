@@ -95,17 +95,7 @@
         
         <div class="col-lg-8">
             
-            <div class="card card-soft bg-white mb-4">
-                <div class="card-header bg-white p-4 border-0 d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="fw-bold mb-0 text-dark">{{ __('messages.weekly_attendance') }}</h6>
-                        <small class="text-muted">{{ __('messages.last_5_days') }}</small>
-                    </div>
-                </div>
-                <div class="card-body p-4 pt-0">
-                    <canvas id="dashboardAttendanceChart" height="80"></canvas>
-                </div>
-            </div>
+            {{-- KAD GRAF MOCK DATA TELAH DIBUANG AGAR RUANG LEBIH RELEVAN --}}
 
             <div class="card card-soft bg-white">
                 <div class="card-header bg-white p-4 border-0 d-flex justify-content-between align-items-center">
@@ -124,25 +114,26 @@
                         </thead>
                         <tbody>
                             @forelse($recentEnrollments ?? [] as $enrolment)
-    <tr>
-        <td class="ps-4 fw-bold text-dark">{{ $enrolment->student_name ?? $enrolment->name }}</td>
-        <td>{{ $enrolment->target_class ?? $enrolment->class_name ?? 'N/A' }}</td>
-        <td class="text-muted small">{{ $enrolment->created_at->format('d M Y') }}</td>
-        <td class="text-end pe-4">
-            @if($enrolment->status == 'Enrolled' || $enrolment->status == 'Approved')
-                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill">{{ __('messages.enrolled') }}</span>
-            @else
-                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill">{{ __('messages.pending') }}</span>
-            @endif
-        </td>
-    </tr>
-    @empty
-    <tr>
-        <td colspan="4" class="text-center py-4 text-muted">
-            {{ __('messages.no_recent_enroll') }}
-        </td>
-    </tr>
-    @endforelse
+                            <tr>
+                                <td class="ps-4 fw-bold text-dark">{{ $enrolment->student_name ?? $enrolment->name }}</td>
+                                <td>{{ $enrolment->target_class ?? $enrolment->class_name ?? 'N/A' }}</td>
+                                <td class="text-muted small">{{ $enrolment->created_at ? $enrolment->created_at->format('d M Y') : 'N/A' }}</td>
+                                <td class="text-end pe-4">
+                                    {{-- LOGIK BARU: Mengabaikan huruf besar/kecil DAN menyemak jika kelas sudah diisi --}}
+                                    @if(in_array(strtolower($enrolment->status ?? ''), ['enrolled', 'approved', 'success']) || ($enrolment->target_class && $enrolment->target_class != 'N/A'))
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill">{{ __('messages.enrolled') }}</span>
+                                    @else
+                                        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill">{{ __('messages.pending') }}</span>
+                                    @endif
+                                </td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">
+                                    {{ __('messages.no_recent_enroll') }}
+                                </td>
+                            </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
@@ -185,26 +176,27 @@
                     </div>
                 </div>
             </div>
+
             <div class="card card-soft bg-white">
                 <div class="card-header bg-white p-4 border-0">
                     <h6 class="fw-bold mb-0 text-dark">{{ __('messages.alerts_tasks') }}</h6>
                 </div>
                 <div class="card-body p-0">
                     <ul class="list-group list-group-flush">
-    @forelse($alerts ?? [] as $alert)
-    <li class="list-group-item p-4 d-flex align-items-start border-top border-bottom-0">
-        <i class="bi {{ $alert['icon'] ?? 'bi-info-circle-fill' }} text-{{ $alert['color'] ?? 'info' }} fs-5 me-3"></i>
-        <div>
-            <h6 class="mb-1 fw-bold text-dark">{{ $alert['title'] }}</h6>
-            <p class="mb-0 text-muted small">{{ $alert['message'] }}</p>
-        </div>
-    </li>
-    @empty
-    <li class="list-group-item p-4 text-center text-muted border-top border-bottom-0">
-        <p class="mb-0 small">{{ __('messages.no_alerts') }}</p>
-    </li>
-    @endforelse
-</ul>
+                        @forelse($alerts ?? [] as $alert)
+                        <li class="list-group-item p-4 d-flex align-items-start border-top border-bottom-0">
+                            <i class="bi {{ $alert['icon'] ?? 'bi-info-circle-fill' }} text-{{ $alert['color'] ?? 'info' }} fs-5 me-3"></i>
+                            <div>
+                                <h6 class="mb-1 fw-bold text-dark">{{ $alert['title'] }}</h6>
+                                <p class="mb-0 text-muted small">{{ $alert['message'] }}</p>
+                            </div>
+                        </li>
+                        @empty
+                        <li class="list-group-item p-4 text-center text-muted border-top border-bottom-0">
+                            <p class="mb-0 small">{{ __('messages.no_alerts') }}</p>
+                        </li>
+                        @endforelse
+                    </ul>
                 </div>
             </div>
 
@@ -212,42 +204,5 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const ctx = document.getElementById('dashboardAttendanceChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                // Read labels directly from Laravel Controller
-                labels: {!! json_encode($attendanceLabels) !!},
-                datasets: [{
-                    label: 'Overall Attendance (%)',
-                    // Read data directly from Laravel Controller
-                    data: {!! json_encode($attendanceData) !!}, 
-                    borderColor: '#0d6efd',
-                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.4, // Makes the line curved and smooth
-                    pointBackgroundColor: '#fff',
-                    pointBorderColor: '#0d6efd',
-                    pointBorderWidth: 2,
-                    pointRadius: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false } 
-                },
-                scales: {
-                    y: { beginAtZero: false, min: 80, max: 100, grid: { borderDash: [2, 4] } },
-                    x: { grid: { display: false } }
-                }
-            }
-        });
-    });
-</script>
+{{-- JAVASCRIPT CHART.JS DIALIH KELUAR AGAR TIDAK BERLAKU RALAT CONSOLE --}}
 @endsection
