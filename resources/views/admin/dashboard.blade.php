@@ -116,28 +116,37 @@
                                 <th class="text-end pe-4">{{ __('messages.status') }}</th>
                             </tr>
                         </thead>
+                        
                         <tbody>
                             @forelse($recentEnrollments ?? [] as $enrolment)
                             <tr>
                                 <td class="ps-4 fw-bold text-dark">{{ $enrolment->student_name ?? $enrolment->name }}</td>
-                                <td>{{ $enrolment->target_class ?? $enrolment->class_name ?? 'N/A' }}</td>
-                                <td class="text-muted small">{{ $enrolment->created_at ? $enrolment->created_at->format('d M Y') : 'N/A' }}</td>
-                                <td class="text-end pe-4">
-                                    {{-- Logik Status Dibaiki --}}
-                                    @if(in_array(strtolower($enrolment->status ?? ''), ['enrolled', 'approved', 'success']) || ($enrolment->target_class && $enrolment->target_class != 'N/A'))
-                                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill">{{ __('messages.enrolled') }}</span>
+                                
+                                <td>
+                                    @if(!empty($enrolment->class_id))
+                                        {{ $enrolment->classroom->class_name ?? $enrolment->class->class_name ?? 'Kelas (ID: ' . $enrolment->class_id . ')' }}
                                     @else
-                                        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill">{{ __('messages.pending') }}</span>
+                                        <span class="text-muted">N/A</span>
+                                    @endif
+                                </td>
+                                
+                                <td class="text-muted small">{{ $enrolment->created_at ? $enrolment->created_at->format('d M Y') : 'N/A' }}</td>
+                                
+                                <td class="text-end pe-4">
+                                    @if(in_array(strtolower($enrolment->status ?? ''), ['active', 'enrolled', 'approved', 'success']) || !empty($enrolment->class_id))
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill">{{ __('messages.enrolled') ?? 'Enrolled' }}</span>
+                                    @else
+                                        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill">{{ __('messages.pending') ?? 'Pending' }}</span>
                                     @endif
                                 </td>
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="4" class="text-center py-4 text-muted">{{ __('messages.no_recent_enroll') }}</td>
+                                <td colspan="4" class="text-center py-4 text-muted">{{ __('messages.no_recent_enroll') ?? 'Tiada pendaftaran baharu' }}</td>
                             </tr>
                             @endforelse
                         </tbody>
-                    </table>
+                        </table>
                 </div>
             </div>
         </div>
