@@ -707,7 +707,7 @@ class AdminController extends Controller
                 Payment::create([
                     'student_id' => $student->student_id, 
                     'title' => 'Yuran Bulanan',
-                    'amount' => 150.00,
+                    'amount' => 2.00,
                     'status' => 'Unpaid',
                     'admin_remarks' => "Yuran Bulanan - $currentMonth"
                 ]);
