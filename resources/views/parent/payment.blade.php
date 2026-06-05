@@ -164,10 +164,10 @@
                     </div>
                 @endif
 
-                <ul class="nav nav-pills mb-4 d-flex bg-light p-1 rounded-pill" id="paymentTabs" role="tablist">
+               <ul class="nav nav-pills mb-4 d-flex bg-light p-1 rounded-pill" id="paymentTabs" role="tablist">
                     <li class="nav-item flex-fill text-center" role="presentation">
                         <button class="nav-link active w-100 rounded-pill fw-bold" id="stripe-tab" data-bs-toggle="pill" data-bs-target="#stripe-payment" type="button" role="tab">
-                            <i class="bi bi-credit-card-fill me-1"></i> {{ __('messages.online_fpx') }}
+                            <i class="bi bi-credit-card-fill me-1"></i> Credit Card & FPX
                         </button>
                     </li>
                     <li class="nav-item flex-fill text-center" role="presentation">
