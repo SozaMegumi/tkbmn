@@ -270,7 +270,7 @@ class ParentController extends Controller
         Stripe::setApiKey(env('STRIPE_SECRET'));
 
         $checkout_session = StripeSession::create([
-            'payment_method_types' => ['card', 'fpx'],
+            'payment_method_types' => ['card'], // Aktifkan pembayaran kad (boleh tambah 'fpx' jika mahu)
             'line_items' => [[
                 'price_data' => [
                     'currency' => 'myr',
