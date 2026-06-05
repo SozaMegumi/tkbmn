@@ -187,7 +187,7 @@ return [
     
     'student_fee_tracker'       => 'Student Fee Tracker',
     'generate_bills'            => 'Generate Monthly Bills',
-    'generate_bills_confirm'    => 'Are you sure you want to generate RM150.00 bills for all active students for this month?',
+    'generate_bills_confirm'    => 'Are you sure you want to generate bills for all active students for this month?',
     'students'                  => 'Students',
     'parent_guardian'           => 'Parent/Guardian',
     'outstanding_balance'       => 'Outstanding Balance',

@@ -187,7 +187,7 @@ return [
     
     'student_fee_tracker'       => 'Penjejak Yuran Pelajar',
     'generate_bills'            => 'Jana Bil Bulanan',
-    'generate_bills_confirm'    => 'Adakah anda pasti menjana bil RM150.00 untuk semua pelajar aktif bulan ini?',
+    'generate_bills_confirm'    => 'Adakah anda pasti menjana bil untuk semua pelajar aktif bulan ini?',
     'students'                  => 'Pelajar',
     'parent_guardian'           => 'Ibu Bapa/Penjaga',
     'outstanding_balance'       => 'Baki Tertunggak',
