@@ -231,6 +231,7 @@ return [
     'save_expense_record'       => 'Simpan Rekod Perbelanjaan',
     'reason_for_rejection'      => 'Sebab Penolakan',
     'confirm_reject'            => 'Sahkan Penolakan',
+    'payment_history'       => 'Sejarah Pembayaran',
 
     // ==========================================
     // 6. ADMIN ENROLMENT MODULE
