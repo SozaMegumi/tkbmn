@@ -10,20 +10,6 @@
         </button>
     </div>
 
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i> {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
-    @if(session('warning'))
-        <div class="alert alert-warning alert-dismissible fade show border-0 shadow-sm" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ session('warning') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
     <div class="row g-4">
         <div class="col-lg-8">
             <div class="card shadow-sm border-0 h-100 overflow-hidden">

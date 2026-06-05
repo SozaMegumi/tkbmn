@@ -716,7 +716,7 @@ class AdminController extends Controller
         }
 
         if($count > 0) {
-            return back()->with('success', "Berjaya! Invois RM 150.00 telah dijana untuk $count orang pelajar bagi bulan $currentMonth.");
+            return back()->with('success', "Berjaya! Invois telah dijana untuk $count orang pelajar bagi bulan $currentMonth.");
         } else {
             return back()->with('warning', "Semua pelajar telah menerima invois untuk bulan $currentMonth.");
         }
