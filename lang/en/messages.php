@@ -667,5 +667,6 @@ return [
     'mastery_level'              => 'Mastery Level',
     'kspk_components'             => 'KSPK Components',
     'save_assessments'            => 'Save Assessment',
-    'school_announcements'     => 'School Announcements'
+    'school_announcements'     => 'School Announcements',
+    'payment_history' => 'Payment History',
 ];
