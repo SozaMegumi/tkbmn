@@ -670,6 +670,8 @@ return [
     'mastery_level'               => 'Tahap Penguasaan',
     'kspk_components'             => 'Komponen KSPK (Tahap Penguasaan)',
     'save_assessments'            => 'Simpan Semua Pentaksiran',
-    'School Announcements' => 'Pengumuman Sekolah'
+    'School Announcements' => 'Pengumuman Sekolah',
+    'messages.approved' => 'Disetujui',
+    'messages.rejected' => 'Ditolak',
 
 ];

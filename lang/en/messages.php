@@ -669,4 +669,6 @@ return [
     'save_assessments'            => 'Save Assessment',
     'school_announcements'     => 'School Announcements',
     'payment_history' => 'Payment History',
+    'messages.approved' => 'Approved',
+    'messages.rejected' => 'Rejected',
 ];

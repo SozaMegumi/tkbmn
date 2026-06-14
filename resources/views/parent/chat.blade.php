@@ -80,7 +80,6 @@
                             </div>
                         </div>
                     </div>
-                    <button class="btn btn-light btn-sm rounded-circle"><i class="bi bi-three-dots-vertical"></i></button>
                 </div>
 
                 <div class="chat-history" id="messagesContainer">
