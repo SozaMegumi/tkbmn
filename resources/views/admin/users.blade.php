@@ -80,13 +80,6 @@
         </div>
     </div>
 
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show rounded-4 shadow-sm border-0 mb-4" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i> {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
     <div class="card card-directory">
         <div class="card-body p-0">
             <ul class="nav nav-tabs nav-fill px-4 pt-3" id="userTabs" role="tablist">
